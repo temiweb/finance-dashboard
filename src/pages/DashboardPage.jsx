@@ -3,9 +3,11 @@ import { DollarSign, TrendingUp, ShoppingCart, Wallet, PieChart, Megaphone } fro
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell } from 'recharts';
 import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
 import { useRevenue, useExpenses, useCashFlow } from '../hooks/useData';
-import { formatMoney, formatMoneyShort, PRODUCT_COLORS, CATEGORY_COLORS } from '../lib/utils';
+import { formatMoney, formatMoneyShort, CATEGORY_COLORS } from '../lib/utils';
+import { useSettings } from '../lib/settings';
 
 export default function DashboardPage() {
+  const { productColors: PRODUCT_COLORS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
 

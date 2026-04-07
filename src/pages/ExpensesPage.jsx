@@ -3,9 +3,11 @@ import { Plus, Trash2, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
-import { formatMoney, formatDate, PRODUCTS, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
+import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
+import { useSettings } from '../lib/settings';
 
 export default function ExpensesPage() {
+  const { products: PRODUCTS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [showAdd, setShowAdd] = useState(false);

@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
 
       if (error) throw error;
 
+      // Supabase auto-parses JSONB, so data.value is already the string
       const storedPin = typeof data.value === 'string' ? data.value : JSON.parse(data.value);
       if (pin === storedPin) {
         localStorage.setItem('finance_session', JSON.stringify({ timestamp: Date.now() }));

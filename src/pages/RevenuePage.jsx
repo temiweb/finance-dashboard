@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Plus, Trash2, TrendingUp } from 'lucide-react';
 import { useRevenue, addRevenue, deleteRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
-import { formatMoney, formatDate, PRODUCTS, MARKETS } from '../lib/utils';
+import { formatMoney, formatDate, MARKETS } from '../lib/utils';
+import { useSettings } from '../lib/settings';
 
 export default function RevenuePage() {
+  const { products: PRODUCTS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
@@ -89,6 +91,7 @@ export default function RevenuePage() {
                     <th>Unit Price</th>
                     <th>Total</th>
                     <th>Source</th>
+                    <th>Status</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -102,6 +105,7 @@ export default function RevenuePage() {
                       <td>{formatMoney(r.unit_price, r.market)}</td>
                       <td className="td-amount">{formatMoney(r.total_amount, r.market)}</td>
                       <td><span className={`source-badge ${r.source}`}>{r.source}</span></td>
+                      <td><span className={`status-badge ${r.status || ''}`}>{r.status || '—'}</span></td>
                       <td>
                         {r.source === 'manual' && (
                           <button className="btn-icon" onClick={() => handleDelete(r.id)}><Trash2 size={14} /></button>

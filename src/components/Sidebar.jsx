@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, TrendingUp, Receipt,
-  PieChart, Megaphone, Wallet, LogOut, Menu, X
+  PieChart, Megaphone, Wallet, LogOut, Menu, X, Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { id: 'profitability', label: 'Profitability', icon: PieChart },
   { id: 'ads', label: 'Ad Performance', icon: Megaphone },
   { id: 'cashflow', label: 'Cash Flow', icon: Wallet },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Sidebar({ activePage, onNavigate }) {

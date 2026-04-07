@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './lib/auth';
+import { SettingsProvider } from './lib/settings';
 import LoginScreen from './components/LoginScreen';
 import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
@@ -8,6 +9,7 @@ import ExpensesPage from './pages/ExpensesPage';
 import ProfitabilityPage from './pages/ProfitabilityPage';
 import AdsPage from './pages/AdsPage';
 import CashFlowPage from './pages/CashFlowPage';
+import SettingsPage from './pages/SettingsPage';
 import { Loader } from './components/SharedUI';
 import './index.css';
 
@@ -25,17 +27,20 @@ function AppContent() {
     profitability: ProfitabilityPage,
     ads: AdsPage,
     cashflow: CashFlowPage,
+    settings: SettingsPage,
   };
 
   const PageComponent = pages[activePage] || DashboardPage;
 
   return (
-    <div className="app-layout">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
-      <main className="main-content">
-        <PageComponent />
-      </main>
-    </div>
+    <SettingsProvider>
+      <div className="app-layout">
+        <Sidebar activePage={activePage} onNavigate={setActivePage} />
+        <main className="main-content">
+          <PageComponent />
+        </main>
+      </div>
+    </SettingsProvider>
   );
 }
 
