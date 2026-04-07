@@ -12,10 +12,11 @@ export function useRevenue(period = 'month', market = 'all') {
     try {
       const { from, to } = getDateRange(period);
 
-      // 1. Fetch CRM orders (auto revenue)
+      // 1. Fetch CRM orders (only delivered = revenue)
       let crmQuery = supabase
         .from('orders')
         .select('id, product, qty, price, country, status, actual_price_collected, delivery_fee, created_at')
+        .eq('status', 'delivered')
         .gte('created_at', `${from}T00:00:00`)
         .lte('created_at', `${to}T23:59:59`)
         .order('created_at', { ascending: false });

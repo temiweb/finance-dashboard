@@ -25,10 +25,9 @@ export default function DashboardPage() {
     const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
     const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
-    const cashCollected = cashflow.reduce((s, c) => s + Number(c.cash_collected), 0);
-    const pendingCash = cashflow.reduce((s, c) => s + Number(c.pending_amount), 0);
+    const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
 
-    return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalOrders, cashCollected, pendingCash };
+    return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalOrders, cashCollected };
   }, [revenue, expenses, cashflow]);
 
   // Revenue by product chart data
@@ -83,7 +82,7 @@ export default function DashboardPage() {
             <KpiCard title="Expenses" value={formatMoney(stats.totalExpenses)} subtitle={`Ad spend: ${formatMoney(stats.totalAdSpend)}`} icon={DollarSign} color="#E8594F" />
             <KpiCard title="Profit" value={formatMoney(stats.totalProfit)} subtitle={`${stats.margin.toFixed(1)}% margin`} icon={PieChart} color={stats.totalProfit >= 0 ? '#4ECDC4' : '#E8594F'} />
             <KpiCard title="ROAS" value={stats.roas > 0 ? `${stats.roas.toFixed(1)}x` : '—'} subtitle="Return on ad spend" icon={Megaphone} color="#F4A142" />
-            <KpiCard title="Cash Collected" value={formatMoney(stats.cashCollected)} subtitle={`Pending: ${formatMoney(stats.pendingCash)}`} icon={Wallet} color="#7B68EE" />
+            <KpiCard title="Cash Received" value={formatMoney(stats.cashCollected)} subtitle="From agents & exchangers" icon={Wallet} color="#7B68EE" />
             <KpiCard title="Orders" value={stats.totalOrders.toLocaleString()} subtitle={`Avg: ${stats.totalOrders > 0 ? formatMoney(stats.totalRevenue / stats.totalOrders) : '—'}`} icon={ShoppingCart} color="#45B7D1" />
           </div>
 

@@ -17,27 +17,37 @@ export default function RevenuePage() {
     date: new Date().toISOString().split('T')[0],
     product: PRODUCTS[0],
     market: 'nigeria',
-    quantity: 1,
+    quantity: '',
     unit_price: '',
+    total_amount: '',
     notes: '',
   });
 
   const totalRevenue = data.reduce((s, r) => s + Number(r.total_amount), 0);
   const totalOrders = data.reduce((s, r) => s + (r.quantity || 1), 0);
 
+  // Compute display total: if total_amount is filled use that, else qty × unit_price
+  const computedTotal = form.total_amount
+    ? Number(form.total_amount)
+    : (Number(form.quantity) || 0) * (Number(form.unit_price) || 0);
+  const canSave = computedTotal > 0;
+
   const handleSave = async () => {
-    if (!form.unit_price) return;
+    if (!canSave) return;
     setSaving(true);
     try {
       await addRevenue({
-        ...form,
-        quantity: Number(form.quantity),
-        unit_price: Number(form.unit_price),
-        total_amount: Number(form.quantity) * Number(form.unit_price),
+        date: form.date,
+        product: form.product,
+        market: form.market,
+        quantity: Number(form.quantity) || 1,
+        unit_price: Number(form.unit_price) || computedTotal,
+        total_amount: computedTotal,
         source: 'manual',
+        notes: form.notes || null,
       });
       setShowAdd(false);
-      setForm({ date: new Date().toISOString().split('T')[0], product: PRODUCTS[0], market: 'nigeria', quantity: 1, unit_price: '', notes: '' });
+      setForm({ date: new Date().toISOString().split('T')[0], product: PRODUCTS[0], market: 'nigeria', quantity: '', unit_price: '', total_amount: '', notes: '' });
       refetch();
     } catch (e) {
       alert('Error: ' + e.message);
@@ -139,26 +149,32 @@ export default function RevenuePage() {
             </select>
           </label>
           <label>
-            <span>Quantity</span>
-            <input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+            <span>Total Amount</span>
+            <input type="number" min="0" placeholder="e.g. 250000 (lump sum)" value={form.total_amount} onChange={(e) => setForm({ ...form, total_amount: e.target.value })} />
           </label>
           <label>
-            <span>Unit Price</span>
-            <input type="number" min="0" placeholder="e.g. 15000" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
+            <span>Qty Sold (optional)</span>
+            <input type="number" min="1" placeholder="e.g. 15" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+          </label>
+          <label>
+            <span>Unit Price (optional)</span>
+            <input type="number" min="0" placeholder="Auto if total + qty given" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
           </label>
           <label className="full-width">
             <span>Notes (optional)</span>
             <input type="text" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </label>
         </div>
-        {form.unit_price && (
+        <p className="form-hint">Enter a total amount directly, or fill qty × unit price to calculate it.</p>
+        {computedTotal > 0 && (
           <div className="form-preview">
-            Total: {formatMoney(Number(form.quantity) * Number(form.unit_price), form.market)}
+            Total: {formatMoney(computedTotal, form.market)}
+            {form.quantity && computedTotal > 0 ? ` (${form.quantity} units)` : ''}
           </div>
         )}
         <div className="form-actions">
           <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving || !form.unit_price}>
+          <button className="btn-primary" onClick={handleSave} disabled={saving || !canSave}>
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>

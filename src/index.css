@@ -616,6 +616,41 @@ html, body, #root {
   color: var(--primary);
 }
 
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.75rem;
+}
+
+/* ── Source Breakdown (Cash Flow) ── */
+.source-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+}
+
+.source-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.source-amount {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
