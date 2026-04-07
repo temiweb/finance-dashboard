@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
 
       if (error) throw error;
 
-      const storedPin = JSON.parse(data.value);
+      const storedPin = typeof data.value === 'string' ? data.value : JSON.parse(data.value);
       if (pin === storedPin) {
         localStorage.setItem('finance_session', JSON.stringify({ timestamp: Date.now() }));
         setIsAuthenticated(true);
