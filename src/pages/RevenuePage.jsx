@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2, TrendingUp } from 'lucide-react';
-import { useRevenue, addRevenue, deleteRecord } from '../hooks/useData';
+import { Plus, Trash2, Pencil, TrendingUp } from 'lucide-react';
+import { useRevenue, addRevenue, deleteRecord, updateRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
@@ -9,11 +9,12 @@ export default function RevenuePage() {
   const { products: PRODUCTS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
-  const [showAdd, setShowAdd] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const { data, loading, refetch } = useRevenue(period, market);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     date: new Date().toISOString().split('T')[0],
     product: PRODUCTS[0],
     market: 'nigeria',
@@ -21,7 +22,8 @@ export default function RevenuePage() {
     unit_price: '',
     total_amount: '',
     notes: '',
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const totalRevenue = data.reduce((s, r) => s + Number(r.total_amount), 0);
   const totalOrders = data.reduce((s, r) => s + (r.quantity || 1), 0);
@@ -36,7 +38,7 @@ export default function RevenuePage() {
     if (!canSave) return;
     setSaving(true);
     try {
-      await addRevenue({
+      const entry = {
         date: form.date,
         product: form.product,
         market: form.market,
@@ -45,15 +47,41 @@ export default function RevenuePage() {
         total_amount: computedTotal,
         source: 'manual',
         notes: form.notes || null,
-      });
-      setShowAdd(false);
-      setForm({ date: new Date().toISOString().split('T')[0], product: PRODUCTS[0], market: 'nigeria', quantity: '', unit_price: '', total_amount: '', notes: '' });
+      };
+      if (editingId) {
+        await updateRecord('finance_revenue', editingId, entry);
+      } else {
+        await addRevenue(entry);
+      }
+      setShowModal(false);
+      setEditingId(null);
+      setForm(emptyForm);
       refetch();
     } catch (e) {
       alert('Error: ' + e.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEdit = (entry) => {
+    setEditingId(entry.id);
+    setForm({
+      date: entry.date,
+      product: entry.product,
+      market: entry.market,
+      quantity: String(entry.quantity || ''),
+      unit_price: String(entry.unit_price || ''),
+      total_amount: String(entry.total_amount || ''),
+      notes: entry.notes || '',
+    });
+    setShowModal(true);
   };
 
   const handleDelete = async (id) => {
@@ -70,7 +98,7 @@ export default function RevenuePage() {
     <div className="page">
       <div className="page-header">
         <h1>Revenue</h1>
-        <button className="btn-primary" onClick={() => setShowAdd(true)}>
+        <button className="btn-primary" onClick={openAdd}>
           <Plus size={16} /> Add Revenue
         </button>
       </div>
@@ -88,7 +116,7 @@ export default function RevenuePage() {
           </div>
 
           {data.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="No revenue data" message="Add your first revenue entry to start tracking" action={<button className="btn-primary" onClick={() => setShowAdd(true)}>Add Revenue</button>} />
+            <EmptyState icon={TrendingUp} title="No revenue data" message="Add your first revenue entry to start tracking" action={<button className="btn-primary" onClick={openAdd}>Add Revenue</button>} />
           ) : (
             <div className="data-table-wrap">
               <table className="data-table">
@@ -116,9 +144,12 @@ export default function RevenuePage() {
                       <td className="td-amount">{formatMoney(r.total_amount, r.market)}</td>
                       <td><span className={`source-badge ${r.source}`}>{r.source}</span></td>
                       <td><span className={`status-badge ${r.status || ''}`}>{r.status || '—'}</span></td>
-                      <td>
+                      <td className="td-actions">
                         {r.source === 'manual' && (
-                          <button className="btn-icon" onClick={() => handleDelete(r.id)}><Trash2 size={14} /></button>
+                          <>
+                            <button className="btn-icon btn-edit" onClick={() => openEdit(r)}><Pencil size={14} /></button>
+                            <button className="btn-icon" onClick={() => handleDelete(r.id)}><Trash2 size={14} /></button>
+                          </>
                         )}
                       </td>
                     </tr>
@@ -130,7 +161,7 @@ export default function RevenuePage() {
         </>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Revenue">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingId(null); }} title={editingId ? 'Edit Revenue' : 'Add Revenue'}>
         <div className="form-grid">
           <label>
             <span>Date</span>
@@ -173,9 +204,9 @@ export default function RevenuePage() {
           </div>
         )}
         <div className="form-actions">
-          <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn-secondary" onClick={() => { setShowModal(false); setEditingId(null); }}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || !canSave}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving…' : editingId ? 'Update' : 'Save'}
           </button>
         </div>
       </Modal>

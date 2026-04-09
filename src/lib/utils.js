@@ -5,7 +5,7 @@ export const CURRENCIES = { nigeria: '₦', ghana: 'GH₵' };
 
 export const PRODUCTS = [
   'Net Repair Tape',
-  'Mesh Tape',
+  'Heavy Duty Mesh Tape',
   'Car Scratch Remover',
   'Deep Edge Crevice Brush',
 ];
@@ -30,7 +30,7 @@ export const CATEGORY_COLORS = {
 
 export const PRODUCT_COLORS = {
   'Net Repair Tape': '#E8594F',
-  'Mesh Tape': '#F4A142',
+  'Heavy Duty Mesh Tape': '#F4A142',
   'Car Scratch Remover': '#4ECDC4',
   'Deep Edge Crevice Brush': '#7B68EE',
 };

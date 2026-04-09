@@ -506,6 +506,13 @@ html, body, #root {
 }
 
 .btn-icon:hover { background: var(--danger-dim); color: var(--danger); }
+.btn-icon.btn-edit:hover { background: var(--primary-dim); color: var(--primary); }
+
+.td-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
 
 /* ── Modal ── */
 .modal-overlay {

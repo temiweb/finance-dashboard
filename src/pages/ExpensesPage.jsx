@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, Trash2, Receipt } from 'lucide-react';
+import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useExpenses, addExpense, deleteRecord } from '../hooks/useData';
+import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
@@ -10,11 +10,12 @@ export default function ExpensesPage() {
   const { products: PRODUCTS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
-  const [showAdd, setShowAdd] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const { data, loading, refetch } = useExpenses(period, market);
 
-  const [form, setForm] = useState({
+  const emptyForm = {
     date: new Date().toISOString().split('T')[0],
     category: 'ad_spend',
     product: '',
@@ -22,7 +23,8 @@ export default function ExpensesPage() {
     campaign: '',
     amount: '',
     description: '',
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const totalExpenses = data.reduce((s, e) => s + Number(e.amount), 0);
   const adSpend = data.filter(e => e.category === 'ad_spend').reduce((s, e) => s + Number(e.amount), 0);
@@ -34,6 +36,26 @@ export default function ExpensesPage() {
       return acc;
     }, {})
   ).map(([, v]) => v);
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEdit = (entry) => {
+    setEditingId(entry.id);
+    setForm({
+      date: entry.date,
+      category: entry.category,
+      product: entry.product || '',
+      market: entry.market,
+      campaign: entry.campaign || '',
+      amount: String(entry.amount),
+      description: entry.description || '',
+    });
+    setShowModal(true);
+  };
 
   const handleSave = async () => {
     if (!form.amount) return;
@@ -48,9 +70,14 @@ export default function ExpensesPage() {
         product: form.product || null,
         campaign: form.campaign || null,
       };
-      await addExpense(entry);
-      setShowAdd(false);
-      setForm({ date: new Date().toISOString().split('T')[0], category: 'ad_spend', product: '', market: 'nigeria', campaign: '', amount: '', description: '' });
+      if (editingId) {
+        await updateRecord('finance_expenses', editingId, entry);
+      } else {
+        await addExpense(entry);
+      }
+      setShowModal(false);
+      setEditingId(null);
+      setForm(emptyForm);
       refetch();
     } catch (e) {
       alert('Error: ' + e.message);
@@ -83,7 +110,7 @@ export default function ExpensesPage() {
     <div className="page">
       <div className="page-header">
         <h1>Expenses</h1>
-        <button className="btn-primary" onClick={() => setShowAdd(true)}>
+        <button className="btn-primary" onClick={openAdd}>
           <Plus size={16} /> Add Expense
         </button>
       </div>
@@ -125,7 +152,7 @@ export default function ExpensesPage() {
           )}
 
           {data.length === 0 ? (
-            <EmptyState icon={Receipt} title="No expenses recorded" message="Track your costs to see profitability" action={<button className="btn-primary" onClick={() => setShowAdd(true)}>Add Expense</button>} />
+            <EmptyState icon={Receipt} title="No expenses recorded" message="Track your costs to see profitability" action={<button className="btn-primary" onClick={openAdd}>Add Expense</button>} />
           ) : (
             <div className="data-table-wrap">
               <table className="data-table">
@@ -153,7 +180,8 @@ export default function ExpensesPage() {
                       <td><span className={`market-badge ${e.market}`}>{e.market}</span></td>
                       <td className="td-amount">{formatMoney(e.amount, e.market === 'both' ? 'nigeria' : e.market)}</td>
                       <td className="td-desc">{e.description || '—'}</td>
-                      <td>
+                      <td className="td-actions">
+                        <button className="btn-icon btn-edit" onClick={() => openEdit(e)}><Pencil size={14} /></button>
                         <button className="btn-icon" onClick={() => handleDelete(e.id)}><Trash2 size={14} /></button>
                       </td>
                     </tr>
@@ -165,7 +193,7 @@ export default function ExpensesPage() {
         </>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Expense">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingId(null); }} title={editingId ? 'Edit Expense' : 'Add Expense'}>
         <div className="form-grid">
           <label>
             <span>Date</span>
@@ -206,9 +234,9 @@ export default function ExpensesPage() {
           </label>
         </div>
         <div className="form-actions">
-          <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+          <button className="btn-secondary" onClick={() => { setShowModal(false); setEditingId(null); }}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || !form.amount}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving…' : editingId ? 'Update' : 'Save'}
           </button>
         </div>
       </Modal>

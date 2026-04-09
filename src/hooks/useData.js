@@ -181,3 +181,14 @@ export async function deleteRecord(table, id) {
   const { error } = await supabase.from(table).delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function updateRecord(table, id, updates) {
+  const { data, error } = await supabase
+    .from(table)
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}

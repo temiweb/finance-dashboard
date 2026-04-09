@@ -5,7 +5,7 @@ const SettingsContext = createContext(null);
 
 const DEFAULT_PRODUCTS = [
   'Net Repair Tape',
-  'Mesh Tape',
+  'Heavy Duty Mesh Tape',
   'Car Scratch Remover',
   'Deep Edge Crevice Brush',
 ];
