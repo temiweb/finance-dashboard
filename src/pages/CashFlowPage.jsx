@@ -98,7 +98,7 @@ export default function CashFlowPage() {
           <div className="kpi-grid kpi-grid-3">
             <KpiCard title="Total Received" value={formatMoney(stats.totalCollected)} subtitle={`${stats.entries} payments`} icon={Wallet} color="#4ECDC4" />
             <KpiCard title="Nigeria" value={formatMoney(stats.ngCollected)} subtitle="From delivery agents" color="#4ECDC4" />
-            <KpiCard title="Ghana" value={formatMoney(stats.ghCollected, 'ghana')} subtitle="From exchanger" color="#F4A142" />
+            <KpiCard title="Ghana" value={formatMoney(stats.ghCollected)} subtitle="From exchanger" color="#F4A142" />
           </div>
 
           {chartData.length > 0 && (
@@ -154,7 +154,7 @@ export default function CashFlowPage() {
                       <td>{formatDate(c.date)}</td>
                       <td className="td-product">{c.source}</td>
                       <td><span className={`market-badge ${c.market}`}>{c.market}</span></td>
-                      <td className="td-amount positive">{formatMoney(c.amount, c.market)}</td>
+                      <td className="td-amount positive">{formatMoney(c.amount)}</td>
                       <td className="td-desc">{c.notes || '—'}</td>
                       <td>
                         <button className="btn-icon" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></button>
