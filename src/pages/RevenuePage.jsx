@@ -6,7 +6,7 @@ import { formatMoney, formatDate, MARKETS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function RevenuePage() {
-  const { products: PRODUCTS } = useSettings();
+  const { products: PRODUCTS, convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -26,14 +26,14 @@ export default function RevenuePage() {
   };
   const [form, setForm] = useState(emptyForm);
 
-  const totalRevenue = data.reduce((s, r) => s + Number(r.total_amount), 0);
+ // Always calculate in naira (converted for Ghana)
+  const totalRevenueNaira = data.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
   const totalOrders = data.reduce((s, r) => s + (r.quantity || 1), 0);
 
-  // Compute display total: if total_amount is filled use that, else qty × unit_price
-  const computedTotal = form.total_amount
-    ? Number(form.total_amount)
-    : (Number(form.quantity) || 0) * (Number(form.unit_price) || 0);
-  const canSave = computedTotal > 0;
+  // Original cedis total (only meaningful when Ghana filter is active)
+  const totalCedis = market === 'ghana'
+    ? data.reduce((s, r) => s + Number(r.total_amount), 0)
+    : 0;
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -112,8 +112,19 @@ export default function RevenuePage() {
       {loading ? <Loader /> : (
         <>
           <div className="kpi-grid kpi-grid-2">
-            <KpiCard title="Total Revenue" value={formatMoney(totalRevenue)} subtitle={`${totalOrders} orders`} icon={TrendingUp} color="#4ECDC4" />
-            <KpiCard title="Avg Order Value" value={totalOrders > 0 ? formatMoney(totalRevenue / totalOrders) : '—'} subtitle={`${data.length} entries`} color="#7B68EE" />
+            <KpiCard
+              title="Total Revenue"
+              value={formatMoney(totalRevenueNaira)}
+              subtitle={market === 'ghana' ? `GH₵${totalCedis.toLocaleString()} · ${totalOrders} units` : `${totalOrders} units sold`}
+              icon={TrendingUp}
+              color="#4ECDC4"
+              />
+            <KpiCard
+              title="Avg Order Value"
+              value={totalOrders > 0 ? formatMoney(totalRevenueNaira / totalOrders) : '—'}
+              subtitle={`${totalOrders} units across ${data.length} entries`}
+              color="#7B68EE"
+              />
           </div>
 
           {data.length === 0 ? (
