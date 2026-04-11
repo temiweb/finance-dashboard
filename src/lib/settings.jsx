@@ -20,6 +20,7 @@ const COLOR_PALETTE = [
 export function SettingsProvider({ children }) {
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [theme, setThemeState] = useState(() => localStorage.getItem('finance_theme') || 'dark');
+  const [exchangeRate, setExchangeRate] = useState(250); // default GH₵1 = ₦250
   const [loading, setLoading] = useState(true);
 
   // Apply theme to DOM
@@ -35,7 +36,7 @@ export function SettingsProvider({ children }) {
         const { data, error } = await supabase
           .from('finance_settings')
           .select('key, value')
-          .in('key', ['products']);
+          .in('key', ['products', 'exchange_rate']);
 
         if (!error && data) {
           const productsRow = data.find(r => r.key === 'products');
@@ -46,6 +47,13 @@ export function SettingsProvider({ children }) {
             if (Array.isArray(parsed) && parsed.length > 0) {
               setProducts(parsed);
             }
+          }
+          const rateRow = data.find(r => r.key === 'exchange_rate');
+          if (rateRow) {
+            const parsed = typeof rateRow.value === 'number'
+              ? rateRow.value
+              : Number(rateRow.value);
+            if (parsed > 0) setExchangeRate(parsed);
           }
         }
       } catch (e) {
@@ -93,6 +101,28 @@ export function SettingsProvider({ children }) {
     }
   }, []);
 
+  // Save exchange rate
+  const saveExchangeRate = useCallback(async (rate) => {
+    try {
+      const numRate = Number(rate);
+      if (!numRate || numRate <= 0) return { success: false, error: 'Invalid rate' };
+      const { error } = await supabase
+        .from('finance_settings')
+        .upsert({ key: 'exchange_rate', value: numRate, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      setExchangeRate(numRate);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }, []);
+
+  // Convert GH₵ to ₦
+  const convertToNaira = useCallback((amount, market) => {
+    if (market === 'ghana') return Number(amount) * exchangeRate;
+    return Number(amount);
+  }, [exchangeRate]);
+
   const setTheme = useCallback((t) => {
     setThemeState(t);
   }, []);
@@ -105,6 +135,9 @@ export function SettingsProvider({ children }) {
       setTheme,
       saveProducts,
       updatePin,
+      exchangeRate,
+      saveExchangeRate,
+      convertToNaira,
       loading,
     }}>
       {children}

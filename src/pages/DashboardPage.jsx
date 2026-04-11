@@ -7,7 +7,7 @@ import { formatMoney, formatMoneyShort, CATEGORY_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function DashboardPage() {
-  const { productColors: PRODUCT_COLORS } = useSettings();
+  const { productColors: PRODUCT_COLORS, convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
 
@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const loading = rl || el || cl;
 
   const stats = useMemo(() => {
-    const totalRevenue = revenue.reduce((s, r) => s + Number(r.total_amount), 0);
+    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
     const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
     const totalAdSpend = expenses.filter(e => e.category === 'ad_spend').reduce((s, e) => s + Number(e.amount), 0);
     const totalProfit = totalRevenue - totalExpenses;
@@ -28,13 +28,13 @@ export default function DashboardPage() {
     const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
 
     return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalOrders, cashCollected };
-  }, [revenue, expenses, cashflow]);
+  }, [revenue, expenses, cashflow, convertToNaira]);
 
-  // Revenue by product chart data
+  // Revenue by product chart data (converted to ₦)
   const revenueByProduct = useMemo(() => {
     const map = {};
     revenue.forEach(r => {
-      map[r.product] = (map[r.product] || 0) + Number(r.total_amount);
+      map[r.product] = (map[r.product] || 0) + convertToNaira(r.total_amount, r.market);
     });
     return Object.entries(map).map(([name, value]) => ({
       name: name.length > 15 ? name.slice(0, 14) + '…' : name,
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       value,
       fill: PRODUCT_COLORS[name] || '#7B68EE',
     }));
-  }, [revenue]);
+  }, [revenue, convertToNaira]);
 
   // Expenses by category chart data
   const expensesByCategory = useMemo(() => {

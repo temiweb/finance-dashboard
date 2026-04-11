@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { useSettings } from '../lib/settings';
 
 export default function SettingsPage() {
-  const { products, theme, setTheme, saveProducts, updatePin, productColors } = useSettings();
+  const { products, theme, setTheme, saveProducts, updatePin, productColors, exchangeRate, saveExchangeRate } = useSettings();
 
   // Products state
   const [editProducts, setEditProducts] = useState(products);
@@ -15,6 +15,12 @@ export default function SettingsPage() {
   const [pinForm, setPinForm] = useState({ current: '', newPin: '', confirm: '' });
   const [pinSaving, setPinSaving] = useState(false);
   const [pinMsg, setPinMsg] = useState(null);
+
+  // Exchange rate state
+  const [editRate, setEditRate] = useState(String(exchangeRate));
+  const [rateSaving, setRateSaving] = useState(false);
+  const [rateMsg, setRateMsg] = useState(null);
+  const rateChanged = Number(editRate) !== exchangeRate;
 
   // Sync editProducts when products change from context
   const productsChanged = JSON.stringify(editProducts) !== JSON.stringify(products);
@@ -158,6 +164,59 @@ export default function SettingsPage() {
               disabled={productsSaving || !productsChanged}
             >
               <Save size={14} /> {productsSaving ? 'Saving…' : 'Save Products'}
+            </button>
+          </div>
+        </div>
+
+        {/* Exchange Rate */}
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <ArrowRightLeft size={18} />
+            <h3>Exchange Rate</h3>
+          </div>
+          <p className="settings-desc">GH₵ to ₦ conversion rate. Used to convert Ghana revenue to naira for profitability calculations. Update this when the rate changes.</p>
+
+          <div className="rate-form">
+            <div className="rate-display">
+              <span className="rate-label">GH₵ 1</span>
+              <span className="rate-equals">=</span>
+              <span className="rate-label">₦</span>
+              <input
+                type="number"
+                min="1"
+                step="0.01"
+                value={editRate}
+                onChange={(e) => setEditRate(e.target.value)}
+                className="rate-input"
+              />
+            </div>
+            <p className="rate-preview">
+              e.g. GH₵ 100 = ₦{(100 * (Number(editRate) || 0)).toLocaleString()}
+            </p>
+          </div>
+
+          {rateMsg && (
+            <div className={`settings-msg ${rateMsg.type}`}>
+              {rateMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+              {rateMsg.text}
+            </div>
+          )}
+
+          <div className="settings-actions">
+            <button
+              className="btn-primary"
+              onClick={async () => {
+                setRateSaving(true);
+                const result = await saveExchangeRate(editRate);
+                setRateMsg(result.success
+                  ? { type: 'success', text: 'Rate updated' }
+                  : { type: 'error', text: result.error });
+                setRateSaving(false);
+                setTimeout(() => setRateMsg(null), 3000);
+              }}
+              disabled={rateSaving || !rateChanged || !Number(editRate)}
+            >
+              <Save size={14} /> {rateSaving ? 'Saving…' : 'Save Rate'}
             </button>
           </div>
         </div>

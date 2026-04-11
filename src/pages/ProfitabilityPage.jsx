@@ -3,9 +3,11 @@ import { PieChart as PieIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort, PRODUCT_COLORS } from '../lib/utils';
+import { formatMoney, formatMoneyShort } from '../lib/utils';
+import { useSettings } from '../lib/settings';
 
 export default function ProfitabilityPage() {
+  const { convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
 
@@ -14,15 +16,15 @@ export default function ProfitabilityPage() {
   const loading = rl || el;
 
   const { overall, byProduct, byMarket } = useMemo(() => {
-    const totalRev = revenue.reduce((s, r) => s + Number(r.total_amount), 0);
+    const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
     const totalExp = expenses.reduce((s, e) => s + Number(e.amount), 0);
     const profit = totalRev - totalExp;
     const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
 
-    // By product
+    // By product (all converted to ₦)
     const prodRevMap = {};
     const prodExpMap = {};
-    revenue.forEach(r => { prodRevMap[r.product] = (prodRevMap[r.product] || 0) + Number(r.total_amount); });
+    revenue.forEach(r => { prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market); });
     expenses.forEach(e => { if (e.product) prodExpMap[e.product] = (prodExpMap[e.product] || 0) + Number(e.amount); });
 
     const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap)])];
@@ -34,10 +36,10 @@ export default function ProfitabilityPage() {
       profit: (prodRevMap[p] || 0) - (prodExpMap[p] || 0),
     }));
 
-    // By market
+    // By market (all converted to ₦)
     const mktRevMap = {};
     const mktExpMap = {};
-    revenue.forEach(r => { mktRevMap[r.market] = (mktRevMap[r.market] || 0) + Number(r.total_amount); });
+    revenue.forEach(r => { mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market); });
     expenses.forEach(e => {
       if (e.market === 'both') {
         mktExpMap['nigeria'] = (mktExpMap['nigeria'] || 0) + Number(e.amount) / 2;
@@ -55,7 +57,7 @@ export default function ProfitabilityPage() {
     }));
 
     return { overall: { totalRev, totalExp, profit, margin }, byProduct, byMarket };
-  }, [revenue, expenses]);
+  }, [revenue, expenses, convertToNaira]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;

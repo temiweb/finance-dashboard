@@ -3,9 +3,11 @@ import { Megaphone, Target, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, EmptyState, Loader } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort, PRODUCT_COLORS } from '../lib/utils';
+import { formatMoney, formatMoneyShort } from '../lib/utils';
+import { useSettings } from '../lib/settings';
 
 export default function AdsPage() {
+  const { convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
 
@@ -16,7 +18,7 @@ export default function AdsPage() {
   const adData = useMemo(() => {
     const adExpenses = expenses.filter(e => e.category === 'ad_spend');
     const totalAdSpend = adExpenses.reduce((s, e) => s + Number(e.amount), 0);
-    const totalRevenue = revenue.reduce((s, r) => s + Number(r.total_amount), 0);
+    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
     const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
     const costPerPurchase = totalOrders > 0 ? totalAdSpend / totalOrders : 0;
@@ -28,7 +30,7 @@ export default function AdsPage() {
     const prodOrdMap = {};
     adExpenses.forEach(e => { if (e.product) prodAdMap[e.product] = (prodAdMap[e.product] || 0) + Number(e.amount); });
     revenue.forEach(r => {
-      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + Number(r.total_amount);
+      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
       prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (r.quantity || 1);
     });
 
@@ -59,7 +61,7 @@ export default function AdsPage() {
       .sort((a, b) => b.spend - a.spend);
 
     return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign };
-  }, [revenue, expenses]);
+  }, [revenue, expenses, convertToNaira]);
 
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null;

@@ -1109,3 +1109,48 @@ html, body, #root {
   .pin-form { flex-direction: column; }
   .theme-toggle-group { flex-direction: column; }
 }
+
+/* ── Exchange Rate Form ── */
+.rate-form {
+  margin-bottom: 0.75rem;
+}
+
+.rate-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rate-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rate-equals {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.rate-input {
+  width: 120px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.rate-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.rate-preview {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
