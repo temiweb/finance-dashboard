@@ -35,6 +35,12 @@ export default function RevenuePage() {
     ? data.reduce((s, r) => s + Number(r.total_amount), 0)
     : 0;
 
+// Compute display total: if total_amount is filled use that, else qty × unit_price
+  const computedTotal = form.total_amount
+    ? Number(form.total_amount)
+    : (Number(form.quantity) || 0) * (Number(form.unit_price) || 0);
+  const canSave = computedTotal > 0;
+  
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
