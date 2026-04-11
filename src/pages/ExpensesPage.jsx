@@ -10,10 +10,11 @@ export default function ExpensesPage() {
   const { products: PRODUCTS } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
+  const [customRange, setCustomRange] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const { data, loading, refetch } = useExpenses(period, market);
+  const { data, loading, refetch } = useExpenses(period, market, customRange);
 
   const emptyForm = {
     date: new Date().toISOString().split('T')[0],
@@ -118,7 +119,7 @@ export default function ExpensesPage() {
       <div className="page-filters">
         <MarketFilter value={market} onChange={setMarket} />
       </div>
-      <PeriodSelector value={period} onChange={setPeriod} />
+      <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
       {loading ? <Loader /> : (
         <>

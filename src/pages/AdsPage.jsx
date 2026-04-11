@@ -10,9 +10,10 @@ export default function AdsPage() {
   const { convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
+  const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market);
-  const { data: expenses, loading: el } = useExpenses(period, market);
+  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
   const loading = rl || el;
 
   const adData = useMemo(() => {
@@ -85,7 +86,7 @@ export default function AdsPage() {
       <div className="page-filters">
         <MarketFilter value={market} onChange={setMarket} />
       </div>
-      <PeriodSelector value={period} onChange={setPeriod} />
+      <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
       {loading ? <Loader /> : (
         <>

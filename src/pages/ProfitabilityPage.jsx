@@ -10,9 +10,10 @@ export default function ProfitabilityPage() {
   const { convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
+  const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market);
-  const { data: expenses, loading: el } = useExpenses(period, market);
+  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
   const loading = rl || el;
 
   const { overall, byProduct, byMarket } = useMemo(() => {
@@ -80,7 +81,7 @@ export default function ProfitabilityPage() {
       <div className="page-filters">
         <MarketFilter value={market} onChange={setMarket} />
       </div>
-      <PeriodSelector value={period} onChange={setPeriod} />
+      <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
       {loading ? <Loader /> : (
         <>

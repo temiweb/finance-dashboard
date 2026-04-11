@@ -10,10 +10,11 @@ export default function DashboardPage() {
   const { productColors: PRODUCT_COLORS, convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
+  const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market);
-  const { data: expenses, loading: el } = useExpenses(period, market);
-  const { data: cashflow, loading: cl } = useCashFlow(period, market);
+  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
+  const { data: cashflow, loading: cl } = useCashFlow(period, market, customRange);
 
   const loading = rl || el || cl;
 
@@ -73,7 +74,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <PeriodSelector value={period} onChange={setPeriod} />
+      <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
       {loading ? <Loader /> : (
         <>

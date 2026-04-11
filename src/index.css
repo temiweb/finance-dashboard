@@ -167,7 +167,6 @@ html, body, #root {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
   background: var(--bg-raised);
   padding: 4px;
   border-radius: var(--radius);
@@ -191,6 +190,44 @@ html, body, #root {
 
 .period-btn:hover { color: var(--text); background: var(--bg-hover); }
 .period-btn.active { background: var(--primary); color: var(--bg); font-weight: 600; }
+
+/* ── Custom Date Range ── */
+.period-selector-wrap {
+  margin-bottom: 1.5rem;
+}
+
+.custom-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.custom-range input[type="date"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.82rem;
+}
+
+.custom-range input[type="date"]:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.custom-range-sep {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
 
 /* ── Market Filter ── */
 .market-filter { display: flex; gap: 4px; }

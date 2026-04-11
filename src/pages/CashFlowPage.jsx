@@ -8,9 +8,10 @@ import { formatMoney, formatDate, MARKETS, formatMoneyShort } from '../lib/utils
 export default function CashFlowPage() {
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
+  const [customRange, setCustomRange] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { data, loading, refetch } = useCashFlow(period, market);
+  const { data, loading, refetch } = useCashFlow(period, market, customRange);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -90,7 +91,7 @@ export default function CashFlowPage() {
       <div className="page-filters">
         <MarketFilter value={market} onChange={setMarket} />
       </div>
-      <PeriodSelector value={period} onChange={setPeriod} />
+      <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
       {loading ? <Loader /> : (
         <>

@@ -52,7 +52,7 @@ export function formatDate(date) {
   return format(new Date(date), 'MMM dd, yyyy');
 }
 
-export function getDateRange(period) {
+export function getDateRange(period, customRange) {
   const today = new Date();
   switch (period) {
     case 'today':
@@ -79,6 +79,9 @@ export function getDateRange(period) {
       };
     case 'all':
       return { from: '2020-01-01', to: format(today, 'yyyy-MM-dd') };
+    case 'custom':
+      if (customRange?.from && customRange?.to) return customRange;
+      return { from: format(startOfMonth(today), 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
     default:
       return { from: format(startOfMonth(today), 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
   }

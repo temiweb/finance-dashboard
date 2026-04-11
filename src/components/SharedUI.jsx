@@ -26,6 +26,8 @@ export function KpiCard({ title, value, subtitle, change, icon: Icon, color }) {
 }
 
 // ── Period Selector ──
+import { useState as usePeriodState } from 'react';
+
 const PERIODS = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'This Week' },
@@ -35,18 +37,60 @@ const PERIODS = [
   { value: 'all', label: 'All Time' },
 ];
 
-export function PeriodSelector({ value, onChange }) {
+export function PeriodSelector({ value, onChange, customRange, onCustomRange }) {
+  const [showCustom, setShowCustom] = usePeriodState(value === 'custom');
+  const [fromDate, setFromDate] = usePeriodState(customRange?.from || '');
+  const [toDate, setToDate] = usePeriodState(customRange?.to || '');
+
+  const handlePreset = (v) => {
+    setShowCustom(false);
+    onChange(v);
+  };
+
+  const handleCustomToggle = () => {
+    setShowCustom(true);
+    if (fromDate && toDate && onCustomRange) {
+      onChange('custom');
+      onCustomRange({ from: fromDate, to: toDate });
+    }
+  };
+
+  const handleApply = () => {
+    if (fromDate && toDate && onCustomRange) {
+      onChange('custom');
+      onCustomRange({ from: fromDate, to: toDate });
+    }
+  };
+
   return (
-    <div className="period-selector">
-      {PERIODS.map((p) => (
+    <div className="period-selector-wrap">
+      <div className="period-selector">
+        {PERIODS.map((p) => (
+          <button
+            key={p.value}
+            className={`period-btn ${value === p.value && !showCustom ? 'active' : ''}`}
+            onClick={() => handlePreset(p.value)}
+          >
+            {p.label}
+          </button>
+        ))}
         <button
-          key={p.value}
-          className={`period-btn ${value === p.value ? 'active' : ''}`}
-          onClick={() => onChange(p.value)}
+          className={`period-btn ${showCustom ? 'active' : ''}`}
+          onClick={handleCustomToggle}
         >
-          {p.label}
+          Custom
         </button>
-      ))}
+      </div>
+      {showCustom && (
+        <div className="custom-range">
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          <span className="custom-range-sep">to</span>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          <button className="btn-primary btn-sm" onClick={handleApply} disabled={!fromDate || !toDate}>
+            Apply
+          </button>
+        </div>
+      )}
     </div>
   );
 }

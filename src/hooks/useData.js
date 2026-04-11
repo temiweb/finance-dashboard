@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { getDateRange } from '../lib/utils';
 
-export function useRevenue(period = 'month', market = 'all') {
+export function useRevenue(period = 'month', market = 'all', customRange = null) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,7 +10,7 @@ export function useRevenue(period = 'month', market = 'all') {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const { from, to } = getDateRange(period);
+      const { from, to } = getDateRange(period, customRange);
 
       // 1. Fetch CRM orders (only delivered = revenue)
       let crmQuery = supabase
@@ -71,13 +71,13 @@ export function useRevenue(period = 'month', market = 'all') {
     } finally {
       setLoading(false);
     }
-  }, [period, market]);
+  }, [period, market, customRange]);
 
   useEffect(() => { fetch(); }, [fetch]);
   return { data, loading, error, refetch: fetch };
 }
 
-export function useExpenses(period = 'month', market = 'all') {
+export function useExpenses(period = 'month', market = 'all', customRange = null) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,7 +85,7 @@ export function useExpenses(period = 'month', market = 'all') {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const { from, to } = getDateRange(period);
+      const { from, to } = getDateRange(period, customRange);
       let query = supabase
         .from('finance_expenses')
         .select('*')
@@ -107,13 +107,13 @@ export function useExpenses(period = 'month', market = 'all') {
     } finally {
       setLoading(false);
     }
-  }, [period, market]);
+  }, [period, market, customRange]);
 
   useEffect(() => { fetch(); }, [fetch]);
   return { data, loading, error, refetch: fetch };
 }
 
-export function useCashFlow(period = 'month', market = 'all') {
+export function useCashFlow(period = 'month', market = 'all', customRange = null) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -121,7 +121,7 @@ export function useCashFlow(period = 'month', market = 'all') {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const { from, to } = getDateRange(period);
+      const { from, to } = getDateRange(period, customRange);
       let query = supabase
         .from('finance_cash_flow')
         .select('*')
@@ -141,7 +141,7 @@ export function useCashFlow(period = 'month', market = 'all') {
     } finally {
       setLoading(false);
     }
-  }, [period, market]);
+  }, [period, market, customRange]);
 
   useEffect(() => { fetch(); }, [fetch]);
   return { data, loading, error, refetch: fetch };
