@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCashFlow, addCashFlow, deleteRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, formatMoneyShort } from '../lib/utils';
 
 export default function CashFlowPage() {
@@ -12,7 +13,11 @@ export default function CashFlowPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [page, setPage] = useState(1);
   const { data, loading, refetch } = useCashFlow(period, market, customRange);
+  const PAGE_SIZE = 15;
+  useEffect(() => { setPage(1); }, [period, market, customRange]);
+  const paginatedData = data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -38,13 +43,14 @@ export default function CashFlowPage() {
     return { totalCollected, ngCollected, ghCollected, entries, bySource };
   }, [data]);
 
-  // Chart: payments over time
+  // Chart: payments over time — use raw date as key to avoid cross-year collisions
   const chartData = useMemo(() => {
     const byDate = {};
     [...data].sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(c => {
-      const d = formatDate(c.date).slice(0, 6);
-      if (!byDate[d]) byDate[d] = { date: d, nigeria: 0, ghana: 0 };
-      byDate[d][c.market] += Number(c.amount || 0);
+      const key = c.date;
+      const label = format(new Date(c.date), 'MMM d');
+      if (!byDate[key]) byDate[key] = { date: label, nigeria: 0, ghana: 0 };
+      byDate[key][c.market] += Number(c.amount || 0);
     });
     return Object.values(byDate).slice(-14);
   }, [data]);
@@ -153,7 +159,7 @@ export default function CashFlowPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((c) => (
+                  {paginatedData.map((c) => (
                     <tr key={c.id}>
                       <td>{formatDate(c.date)}</td>
                       <td className="td-product">{c.source}</td>
@@ -167,6 +173,7 @@ export default function CashFlowPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination page={page} total={data.length} pageSize={PAGE_SIZE} onChange={setPage} />
             </div>
           )}
         </>

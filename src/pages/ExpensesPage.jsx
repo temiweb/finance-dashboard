@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
@@ -15,7 +15,11 @@ export default function ExpensesPage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [page, setPage] = useState(1);
   const { data, loading, refetch } = useExpenses(period, market, customRange);
+  const PAGE_SIZE = 15;
+  useEffect(() => { setPage(1); }, [period, market, customRange]);
+  const paginatedData = data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const emptyForm = {
     date: new Date().toISOString().split('T')[0],
@@ -174,7 +178,7 @@ export default function ExpensesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((e) => (
+                  {paginatedData.map((e) => (
                     <tr key={e.id}>
                       <td>{formatDate(e.date)}</td>
                       <td>
@@ -194,6 +198,7 @@ export default function ExpensesPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination page={page} total={data.length} pageSize={PAGE_SIZE} onChange={setPage} />
             </div>
           )}
         </>

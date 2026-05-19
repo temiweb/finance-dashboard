@@ -145,6 +145,32 @@ export function Loader() {
   );
 }
 
+// ── Pagination ──
+export function Pagination({ page, total, pageSize, onChange }) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return null;
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', gap: '1rem' }}>
+      <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>
+        {from}–{to} of {total}
+      </span>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button className="btn-secondary" onClick={() => onChange(page - 1)} disabled={page === 1}>
+          ← Prev
+        </button>
+        <span style={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', padding: '0 0.5rem' }}>
+          {page} / {totalPages}
+        </span>
+        <button className="btn-secondary" onClick={() => onChange(page + 1)} disabled={page === totalPages}>
+          Next →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Inline form error ──
 export function FormError({ message }) {
   if (!message) return null;

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, Pencil, TrendingUp } from 'lucide-react';
 import { useRevenue, addRevenue, deleteRecord, updateRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
@@ -14,7 +14,11 @@ export default function RevenuePage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [page, setPage] = useState(1);
   const { data, loading, refetch } = useRevenue(period, market, customRange);
+  const PAGE_SIZE = 15;
+  useEffect(() => { setPage(1); }, [period, market, customRange]);
+  const paginatedData = data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const emptyForm = {
     date: new Date().toISOString().split('T')[0],
@@ -157,7 +161,7 @@ export default function RevenuePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.map((r) => (
+                  {paginatedData.map((r) => (
                     <tr key={r.id}>
                       <td>{formatDate(r.date)}</td>
                       <td className="td-product">{r.product}</td>
@@ -179,6 +183,7 @@ export default function RevenuePage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination page={page} total={data.length} pageSize={PAGE_SIZE} onChange={setPage} />
             </div>
           )}
         </>
