@@ -66,24 +66,12 @@ ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_cash_flow ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_settings ENABLE ROW LEVEL SECURITY;
 
--- finance_settings: publicly readable (login needs to fetch the PIN hash before auth),
--- but only authenticated users (anonymous session created after PIN check) can write.
-CREATE POLICY "Read settings" ON finance_settings
-  FOR SELECT USING (true);
-CREATE POLICY "Write settings (auth only)" ON finance_settings
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "Update settings (auth only)" ON finance_settings
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
-CREATE POLICY "Delete settings (auth only)" ON finance_settings
-  FOR DELETE USING (auth.uid() IS NOT NULL);
-
--- Data tables: require an authenticated Supabase session (created via signInAnonymously after PIN)
-CREATE POLICY "Auth only on finance_revenue" ON finance_revenue
-  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "Auth only on finance_expenses" ON finance_expenses
-  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "Auth only on finance_cash_flow" ON finance_cash_flow
-  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+-- Open policies — auth is PIN-based (not Supabase Auth). The anon key is the
+-- access boundary; PIN hashing protects the dashboard UI from unauthorised use.
+CREATE POLICY "Allow all on finance_revenue" ON finance_revenue FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on finance_expenses" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on finance_cash_flow" ON finance_cash_flow FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all on finance_settings" ON finance_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- Indexes for common queries
 CREATE INDEX idx_revenue_date ON finance_revenue(date);

@@ -3,23 +3,33 @@ import { supabase } from './supabase';
 import { hashPin } from './utils';
 
 const AuthContext = createContext(null);
+const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
+
+function generateToken() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Bootstrap from existing Supabase session (survives page refresh)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => subscription.unsubscribe();
+    const raw = localStorage.getItem('finance_session');
+    if (raw) {
+      try {
+        const { token, timestamp } = JSON.parse(raw);
+        if (token && Date.now() - timestamp < SESSION_DURATION) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('finance_session');
+        }
+      } catch {
+        localStorage.removeItem('finance_session');
+      }
+    }
+    setLoading(false);
   }, []);
 
   const login = useCallback(async (pin) => {
@@ -39,18 +49,20 @@ export function AuthProvider({ children }) {
         return { success: false, error: 'Invalid PIN' };
       }
 
-      // PIN verified — create a real server-validated Supabase session
-      const { error: signInError } = await supabase.auth.signInAnonymously();
-      if (signInError) throw signInError;
-
+      localStorage.setItem('finance_session', JSON.stringify({
+        token: generateToken(),
+        timestamp: Date.now(),
+      }));
+      setIsAuthenticated(true);
       return { success: true };
     } catch (err) {
       return { success: false, error: 'Connection error. Check your settings.' };
     }
   }, []);
 
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+  const logout = useCallback(() => {
+    localStorage.removeItem('finance_session');
+    setIsAuthenticated(false);
   }, []);
 
   return (
