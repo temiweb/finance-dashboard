@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
@@ -14,6 +14,7 @@ export default function ExpensesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const { data, loading, refetch } = useExpenses(period, market, customRange);
 
   const emptyForm = {
@@ -41,11 +42,13 @@ export default function ExpensesPage() {
   const openAdd = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setFormError('');
     setShowModal(true);
   };
 
   const openEdit = (entry) => {
     setEditingId(entry.id);
+    setFormError('');
     setForm({
       date: entry.date,
       category: entry.category,
@@ -59,7 +62,9 @@ export default function ExpensesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.amount) return;
+    if (!form.date) return setFormError('Date is required.');
+    if (!form.amount || Number(form.amount) <= 0) return setFormError('Enter a valid amount greater than zero.');
+    setFormError('');
     setSaving(true);
     try {
       const entry = {
@@ -81,7 +86,7 @@ export default function ExpensesPage() {
       setForm(emptyForm);
       refetch();
     } catch (e) {
-      alert('Error: ' + e.message);
+      setFormError('Failed to save: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -93,7 +98,7 @@ export default function ExpensesPage() {
       await deleteRecord('finance_expenses', id);
       refetch();
     } catch (e) {
-      alert('Error: ' + e.message);
+      setFormError('Failed to delete: ' + e.message);
     }
   };
 
@@ -234,6 +239,7 @@ export default function ExpensesPage() {
             <input type="text" placeholder="Optional details" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </label>
         </div>
+        <FormError message={formError} />
         <div className="form-actions">
           <button className="btn-secondary" onClick={() => { setShowModal(false); setEditingId(null); }}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || !form.amount}>

@@ -148,3 +148,13 @@ export function Loader() {
     </div>
   );
 }
+
+// ── Inline form error ──
+export function FormError({ message }) {
+  if (!message) return null;
+  return (
+    <p style={{ color: '#E8594F', fontSize: '0.875rem', margin: '0 0 0.75rem', lineHeight: 1.4 }}>
+      {message}
+    </p>
+  );
+}

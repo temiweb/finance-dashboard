@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCashFlow, addCashFlow, deleteRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, formatMoneyShort } from '../lib/utils';
 
 export default function CashFlowPage() {
@@ -11,6 +11,7 @@ export default function CashFlowPage() {
   const [customRange, setCustomRange] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
   const { data, loading, refetch } = useCashFlow(period, market, customRange);
 
   const [form, setForm] = useState({
@@ -49,7 +50,10 @@ export default function CashFlowPage() {
   }, [data]);
 
   const handleSave = async () => {
-    if (!form.source || !form.amount) return;
+    if (!form.date) return setFormError('Date is required.');
+    if (!form.source.trim()) return setFormError('Source is required.');
+    if (!form.amount || Number(form.amount) <= 0) return setFormError('Enter a valid amount greater than zero.');
+    setFormError('');
     setSaving(true);
     try {
       await addCashFlow({
@@ -63,7 +67,7 @@ export default function CashFlowPage() {
       setForm({ date: new Date().toISOString().split('T')[0], source: '', market: 'nigeria', amount: '', notes: '' });
       refetch();
     } catch (e) {
-      alert('Error: ' + e.message);
+      setFormError('Failed to save: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -75,7 +79,7 @@ export default function CashFlowPage() {
       await deleteRecord('finance_cash_flow', id);
       refetch();
     } catch (e) {
-      alert('Error: ' + e.message);
+      setFormError('Failed to delete: ' + e.message);
     }
   };
 
@@ -83,7 +87,7 @@ export default function CashFlowPage() {
     <div className="page">
       <div className="page-header">
         <h1>Cash Flow</h1>
-        <button className="btn-primary" onClick={() => setShowAdd(true)}>
+        <button className="btn-primary" onClick={() => { setShowAdd(true); setFormError(''); }}>
           <Plus size={16} /> Record Payment
         </button>
       </div>
@@ -193,6 +197,7 @@ export default function CashFlowPage() {
             <input type="text" placeholder="e.g. Week 1 remittance" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </label>
         </div>
+        <FormError message={formError} />
         <div className="form-actions">
           <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || !form.source || !form.amount}>

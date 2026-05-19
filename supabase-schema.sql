@@ -34,15 +34,13 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Cash collection tracking (COD-specific)
+-- Cash collection tracking — payments received from delivery agents / exchangers
 CREATE TABLE IF NOT EXISTS finance_cash_flow (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
+  source TEXT NOT NULL,
   market TEXT NOT NULL CHECK (market IN ('nigeria', 'ghana')),
-  orders_placed INTEGER NOT NULL DEFAULT 0,
-  orders_delivered INTEGER NOT NULL DEFAULT 0,
-  cash_collected NUMERIC(12,2) NOT NULL DEFAULT 0,
-  pending_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  amount NUMERIC(12,2) NOT NULL,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
