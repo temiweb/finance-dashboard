@@ -146,27 +146,36 @@ export function Loader() {
 }
 
 // ── Pagination ──
-export function Pagination({ page, total, pageSize, onChange }) {
+const PAGE_SIZE_OPTIONS = [15, 50, 100];
+
+export function Pagination({ page, total, pageSize, onChange, onPageSizeChange }) {
   const totalPages = Math.ceil(total / pageSize);
-  if (totalPages <= 1) return null;
-  const from = (page - 1) * pageSize + 1;
+  const from = Math.min((page - 1) * pageSize + 1, total);
   const to = Math.min(page * pageSize, total);
+  if (total === 0) return null;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', gap: '1rem' }}>
-      <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>
-        {from}–{to} of {total}
-      </span>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn-secondary" onClick={() => onChange(page - 1)} disabled={page === 1}>
-          ← Prev
-        </button>
-        <span style={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', padding: '0 0.5rem' }}>
-          {page} / {totalPages}
-        </span>
-        <button className="btn-secondary" onClick={() => onChange(page + 1)} disabled={page === totalPages}>
-          Next →
-        </button>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>{from}–{to} of {total}</span>
+        {onPageSizeChange && (
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            style={{ fontSize: '0.85rem', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', cursor: 'pointer' }}
+          >
+            {PAGE_SIZE_OPTIONS.map(n => (
+              <option key={n} value={n}>{n} per page</option>
+            ))}
+          </select>
+        )}
       </div>
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button className="btn-secondary" onClick={() => onChange(page - 1)} disabled={page === 1}>← Prev</button>
+          <span style={{ fontSize: '0.875rem', padding: '0 0.5rem' }}>{page} / {totalPages}</span>
+          <button className="btn-secondary" onClick={() => onChange(page + 1)} disabled={page === totalPages}>Next →</button>
+        </div>
+      )}
     </div>
   );
 }

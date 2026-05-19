@@ -15,10 +15,10 @@ export default function RevenuePage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
   const { data, loading, refetch } = useRevenue(period, market, customRange);
-  const PAGE_SIZE = 15;
   useEffect(() => { setPage(1); }, [period, market, customRange]);
-  const paginatedData = data.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const paginatedData = data.slice((page - 1) * pageSize, page * pageSize);
 
   const emptyForm = {
     date: new Date().toISOString().split('T')[0],
@@ -183,7 +183,7 @@ export default function RevenuePage() {
                   ))}
                 </tbody>
               </table>
-              <Pagination page={page} total={data.length} pageSize={PAGE_SIZE} onChange={setPage} />
+              <Pagination page={page} total={data.length} pageSize={pageSize} onChange={setPage} onPageSizeChange={(n) => { setPageSize(n); setPage(1); }} />
             </div>
           )}
         </>
