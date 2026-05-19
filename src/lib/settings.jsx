@@ -1,15 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
-import { hashPin } from './utils';
+import { hashPin, PRODUCTS as DEFAULT_PRODUCTS } from './utils';
 
 const SettingsContext = createContext(null);
-
-const DEFAULT_PRODUCTS = [
-  'Net Repair Tape',
-  'Heavy Duty Mesh Tape',
-  'Car Scratch Remover',
-  'Deep Edge Crevice Brush',
-];
 
 // Color palette for auto-assigning to products
 const COLOR_PALETTE = [
