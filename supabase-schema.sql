@@ -55,8 +55,9 @@ CREATE TABLE IF NOT EXISTS finance_settings (
 );
 
 -- Insert default settings
+-- Default PIN is SHA-256("1234") — change via the app's Settings page after first login
 INSERT INTO finance_settings (key, value) VALUES
-  ('pin', '"1234"'),
+  ('pin', '"03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"'),
   ('products', '["Net Repair Tape", "Mesh Tape", "Car Scratch Remover", "Deep Edge Crevice Brush"]'),
   ('currency', '{"nigeria": "₦", "ghana": "GH₵"}')
 ON CONFLICT (key) DO NOTHING;
@@ -67,11 +68,24 @@ ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_cash_flow ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_settings ENABLE ROW LEVEL SECURITY;
 
--- Open policies (since auth is PIN-based, not Supabase Auth)
-CREATE POLICY "Allow all on finance_revenue" ON finance_revenue FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_expenses" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_cash_flow" ON finance_cash_flow FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_settings" ON finance_settings FOR ALL USING (true) WITH CHECK (true);
+-- finance_settings: publicly readable (login needs to fetch the PIN hash before auth),
+-- but only authenticated users (anonymous session created after PIN check) can write.
+CREATE POLICY "Read settings" ON finance_settings
+  FOR SELECT USING (true);
+CREATE POLICY "Write settings (auth only)" ON finance_settings
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Update settings (auth only)" ON finance_settings
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Delete settings (auth only)" ON finance_settings
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- Data tables: require an authenticated Supabase session (created via signInAnonymously after PIN)
+CREATE POLICY "Auth only on finance_revenue" ON finance_revenue
+  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Auth only on finance_expenses" ON finance_expenses
+  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Auth only on finance_cash_flow" ON finance_cash_flow
+  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Indexes for common queries
 CREATE INDEX idx_revenue_date ON finance_revenue(date);
