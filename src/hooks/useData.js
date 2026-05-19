@@ -6,173 +6,173 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
 
-  const fetch = useCallback(async () => {
+  useEffect(() => {
+    let ignore = false;
     setLoading(true);
-    try {
-      const { from, to } = getDateRange(period, customRange);
 
-      // 1. Fetch CRM orders (only delivered = revenue)
-      let crmQuery = supabase
-        .from('orders')
-        .select('id, product, qty, price, country, status, actual_price_collected, delivery_fee, created_at')
-        .eq('status', 'delivered')
-        .gte('created_at', `${from}T00:00:00`)
-        .lte('created_at', `${to}T23:59:59`)
-        .order('created_at', { ascending: false });
+    const timer = setTimeout(async () => {
+      try {
+        const { from, to } = getDateRange(period, customRange);
 
-      if (market !== 'all') crmQuery = crmQuery.eq('country', market);
+        let crmQuery = supabase
+          .from('orders')
+          .select('id, product, qty, price, country, status, actual_price_collected, delivery_fee, created_at')
+          .eq('status', 'delivered')
+          .gte('created_at', `${from}T00:00:00`)
+          .lte('created_at', `${to}T23:59:59`)
+          .order('created_at', { ascending: false });
 
-      // 2. Fetch manual revenue entries
-      let manualQuery = supabase
-        .from('finance_revenue')
-        .select('*')
-        .gte('date', from)
-        .lte('date', to)
-        .order('date', { ascending: false });
+        if (market !== 'all') crmQuery = crmQuery.eq('country', market);
 
-      if (market !== 'all') manualQuery = manualQuery.eq('market', market);
+        let manualQuery = supabase
+          .from('finance_revenue')
+          .select('*')
+          .gte('date', from)
+          .lte('date', to)
+          .order('date', { ascending: false });
 
-      const [crmResult, manualResult] = await Promise.all([crmQuery, manualQuery]);
+        if (market !== 'all') manualQuery = manualQuery.eq('market', market);
 
-      if (crmResult.error) throw crmResult.error;
-      if (manualResult.error) throw manualResult.error;
+        const [crmResult, manualResult] = await Promise.all([crmQuery, manualQuery]);
+        if (ignore) return;
 
-      // Normalize CRM orders to match revenue format
-      // Net revenue = actual_price_collected - delivery_fee
-      const crmRows = (crmResult.data || []).map(order => {
-        const collected = Number(order.actual_price_collected) || (Number(order.price) * (order.qty || 1));
-        const deliveryFee = Number(order.delivery_fee) || 0;
-        const netAmount = collected - deliveryFee;
-        return {
-          id: order.id,
-          date: order.created_at?.split('T')[0],
-          product: order.product || 'Unknown',
-          market: order.country || 'nigeria',
-          quantity: order.qty || 1,
-          unit_price: Number(order.price) || 0,
-          total_amount: netAmount,
-          delivery_fee: deliveryFee,
-          source: 'crm',
-          status: order.status,
-          notes: deliveryFee > 0 ? `Delivery fee: ₦${deliveryFee.toLocaleString()}` : null,
-        };
-      });
+        if (crmResult.error) throw crmResult.error;
+        if (manualResult.error) throw manualResult.error;
 
-      // Combine and sort by date descending
-      const combined = [...crmRows, ...(manualResult.data || [])];
-      combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const crmRows = (crmResult.data || []).map(order => {
+          const collected = Number(order.actual_price_collected) || (Number(order.price) * (order.qty || 1));
+          const deliveryFee = Number(order.delivery_fee) || 0;
+          return {
+            id: order.id,
+            date: order.created_at?.split('T')[0],
+            product: order.product || 'Unknown',
+            market: order.country || 'nigeria',
+            quantity: order.qty || 1,
+            unit_price: Number(order.price) || 0,
+            total_amount: collected - deliveryFee,
+            delivery_fee: deliveryFee,
+            source: 'crm',
+            status: order.status,
+            notes: deliveryFee > 0 ? `Delivery fee: ₦${deliveryFee.toLocaleString()}` : null,
+          };
+        });
 
-      setData(combined);
-      setError(null);
-    } catch (e) {
-      setError(e.message);
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [period, market, customRange]);
+        const combined = [...crmRows, ...(manualResult.data || [])];
+        combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setData(combined);
+        setError(null);
+      } catch (e) {
+        if (!ignore) { setError(e.message); setData([]); }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }, 250);
 
-  useEffect(() => { fetch(); }, [fetch]);
-  return { data, loading, error, refetch: fetch };
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [period, market, customRange, tick]);
+
+  const refetch = useCallback(() => setTick(t => t + 1), []);
+  return { data, loading, error, refetch };
 }
 
 export function useExpenses(period = 'month', market = 'all', customRange = null) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
 
-  const fetch = useCallback(async () => {
+  useEffect(() => {
+    let ignore = false;
     setLoading(true);
-    try {
-      const { from, to } = getDateRange(period, customRange);
-      let query = supabase
-        .from('finance_expenses')
-        .select('*')
-        .gte('date', from)
-        .lte('date', to)
-        .order('date', { ascending: false });
 
-      if (market !== 'all') {
-        query = query.or(`market.eq.${market},market.eq.both`);
+    const timer = setTimeout(async () => {
+      try {
+        const { from, to } = getDateRange(period, customRange);
+        let query = supabase
+          .from('finance_expenses')
+          .select('*')
+          .gte('date', from)
+          .lte('date', to)
+          .order('date', { ascending: false });
+
+        if (market !== 'all') query = query.or(`market.eq.${market},market.eq.both`);
+
+        const { data: rows, error: err } = await query;
+        if (ignore) return;
+        if (err) throw err;
+        setData(rows || []);
+        setError(null);
+      } catch (e) {
+        if (!ignore) { setError(e.message); setData([]); }
+      } finally {
+        if (!ignore) setLoading(false);
       }
+    }, 250);
 
-      const { data: rows, error: err } = await query;
-      if (err) throw err;
-      setData(rows || []);
-      setError(null);
-    } catch (e) {
-      setError(e.message);
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [period, market, customRange]);
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [period, market, customRange, tick]);
 
-  useEffect(() => { fetch(); }, [fetch]);
-  return { data, loading, error, refetch: fetch };
+  const refetch = useCallback(() => setTick(t => t + 1), []);
+  return { data, loading, error, refetch };
 }
 
 export function useCashFlow(period = 'month', market = 'all', customRange = null) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
 
-  const fetch = useCallback(async () => {
+  useEffect(() => {
+    let ignore = false;
     setLoading(true);
-    try {
-      const { from, to } = getDateRange(period, customRange);
-      let query = supabase
-        .from('finance_cash_flow')
-        .select('*')
-        .gte('date', from)
-        .lte('date', to)
-        .order('date', { ascending: false });
 
-      if (market !== 'all') query = query.eq('market', market);
+    const timer = setTimeout(async () => {
+      try {
+        const { from, to } = getDateRange(period, customRange);
+        let query = supabase
+          .from('finance_cash_flow')
+          .select('*')
+          .gte('date', from)
+          .lte('date', to)
+          .order('date', { ascending: false });
 
-      const { data: rows, error: err } = await query;
-      if (err) throw err;
-      setData(rows || []);
-      setError(null);
-    } catch (e) {
-      setError(e.message);
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [period, market, customRange]);
+        if (market !== 'all') query = query.eq('market', market);
 
-  useEffect(() => { fetch(); }, [fetch]);
-  return { data, loading, error, refetch: fetch };
+        const { data: rows, error: err } = await query;
+        if (ignore) return;
+        if (err) throw err;
+        setData(rows || []);
+        setError(null);
+      } catch (e) {
+        if (!ignore) { setError(e.message); setData([]); }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }, 250);
+
+    return () => { ignore = true; clearTimeout(timer); };
+  }, [period, market, customRange, tick]);
+
+  const refetch = useCallback(() => setTick(t => t + 1), []);
+  return { data, loading, error, refetch };
 }
 
 export async function addRevenue(entry) {
-  const { data, error } = await supabase
-    .from('finance_revenue')
-    .insert([entry])
-    .select()
-    .single();
+  const { data, error } = await supabase.from('finance_revenue').insert([entry]).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function addExpense(entry) {
-  const { data, error } = await supabase
-    .from('finance_expenses')
-    .insert([entry])
-    .select()
-    .single();
+  const { data, error } = await supabase.from('finance_expenses').insert([entry]).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function addCashFlow(entry) {
-  const { data, error } = await supabase
-    .from('finance_cash_flow')
-    .insert([entry])
-    .select()
-    .single();
+  const { data, error } = await supabase.from('finance_cash_flow').insert([entry]).select().single();
   if (error) throw error;
   return data;
 }
@@ -183,12 +183,7 @@ export async function deleteRecord(table, id) {
 }
 
 export async function updateRecord(table, id, updates) {
-  const { data, error } = await supabase
-    .from(table)
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  const { data, error } = await supabase.from(table).update(updates).eq('id', id).select().single();
   if (error) throw error;
   return data;
 }
