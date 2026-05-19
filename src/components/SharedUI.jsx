@@ -49,10 +49,6 @@ export function PeriodSelector({ value, onChange, customRange, onCustomRange }) 
 
   const handleCustomToggle = () => {
     setShowCustom(true);
-    if (fromDate && toDate && onCustomRange) {
-      onChange('custom');
-      onCustomRange({ from: fromDate, to: toDate });
-    }
   };
 
   const handleApply = () => {
