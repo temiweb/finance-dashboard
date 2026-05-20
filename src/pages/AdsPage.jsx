@@ -3,7 +3,7 @@ import { Megaphone, Target, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, EmptyState, Loader } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort } from '../lib/utils';
+import { formatMoney, formatMoneyShort, PLATFORM_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function AdsPage() {
@@ -61,7 +61,17 @@ export default function AdsPage() {
       .map(([name, spend]) => ({ name, spend }))
       .sort((a, b) => b.spend - a.spend);
 
-    return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign };
+    // By platform
+    const platMap = {};
+    adExpenses.forEach(e => {
+      const key = e.platform || 'Untagged';
+      platMap[key] = (platMap[key] || 0) + Number(e.amount);
+    });
+    const byPlatform = Object.entries(platMap)
+      .map(([name, spend]) => ({ name, spend, color: PLATFORM_COLORS[name] || '#95A5A6' }))
+      .sort((a, b) => b.spend - a.spend);
+
+    return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign, byPlatform };
   }, [revenue, expenses, convertToNaira]);
 
   const CustomTooltip = ({ active, payload }) => {
@@ -128,6 +138,33 @@ export default function AdsPage() {
                   </ResponsiveContainer>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Platform breakdown */}
+          {adData.byPlatform.length > 0 && (
+            <div className="chart-card" style={{ marginBottom: '1.5rem' }}>
+              <h3>Spend by Platform</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.75rem' }}>
+                {adData.byPlatform.map(p => (
+                  <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ width: 72, fontSize: '0.875rem', fontWeight: 500 }}>{p.name}</span>
+                    <div style={{ flex: 1, background: 'var(--border)', borderRadius: 4, height: 10, overflow: 'hidden' }}>
+                      <div style={{
+                        width: `${(p.spend / adData.totalAdSpend) * 100}%`,
+                        background: p.color,
+                        height: '100%',
+                        borderRadius: 4,
+                        transition: 'width 0.3s',
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '0.875rem', minWidth: 90, textAlign: 'right' }}>{formatMoney(p.spend)}</span>
+                    <span style={{ fontSize: '0.8rem', opacity: 0.5, minWidth: 36, textAlign: 'right' }}>
+                      {((p.spend / adData.totalAdSpend) * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

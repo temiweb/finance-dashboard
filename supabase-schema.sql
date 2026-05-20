@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   )),
   product TEXT,  -- nullable for general expenses
   market TEXT CHECK (market IN ('nigeria', 'ghana', 'both')),
+  platform TEXT CHECK (platform IN ('TikTok', 'Meta', 'Google', 'YouTube', 'Other')),
   campaign TEXT, -- for ad spend tracking
   amount NUMERIC(12,2) NOT NULL,
   description TEXT,

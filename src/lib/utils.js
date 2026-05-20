@@ -10,6 +10,16 @@ export const PRODUCTS = [
   'Deep Edge Crevice Brush',
 ];
 
+export const AD_PLATFORMS = ['TikTok', 'Meta', 'Google', 'YouTube', 'Other'];
+
+export const PLATFORM_COLORS = {
+  TikTok:  '#69C9D0',
+  Meta:    '#0866FF',
+  Google:  '#4285F4',
+  YouTube: '#FF0000',
+  Other:   '#95A5A6',
+};
+
 export const EXPENSE_CATEGORIES = [
   { value: 'ad_spend', label: 'Ad Spend' },
   { value: 'import_shipping', label: 'Import / Shipping' },

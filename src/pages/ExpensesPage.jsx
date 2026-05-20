@@ -3,7 +3,7 @@ import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
-import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS } from '../lib/utils';
+import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS, AD_PLATFORMS } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function ExpensesPage() {
@@ -26,6 +26,7 @@ export default function ExpensesPage() {
     category: 'ad_spend',
     product: '',
     market: 'nigeria',
+    platform: '',
     campaign: '',
     amount: '',
     description: '',
@@ -58,6 +59,7 @@ export default function ExpensesPage() {
       category: entry.category,
       product: entry.product || '',
       market: entry.market,
+      platform: entry.platform || '',
       campaign: entry.campaign || '',
       amount: String(entry.amount),
       description: entry.description || '',
@@ -78,7 +80,8 @@ export default function ExpensesPage() {
         amount: Number(form.amount),
         description: form.description || null,
         product: form.product || null,
-        campaign: form.campaign || null,
+        platform: form.category === 'ad_spend' ? (form.platform || null) : null,
+        campaign: form.category === 'ad_spend' ? (form.campaign || null) : null,
       };
       if (editingId) {
         await updateRecord('finance_expenses', editingId, entry);
@@ -170,6 +173,7 @@ export default function ExpensesPage() {
                   <tr>
                     <th>Date</th>
                     <th>Category</th>
+                    <th>Platform</th>
                     <th>Product</th>
                     <th>Market</th>
                     <th>Amount</th>
@@ -186,6 +190,7 @@ export default function ExpensesPage() {
                           {EXPENSE_CATEGORIES.find(c => c.value === e.category)?.label || e.category}
                         </span>
                       </td>
+                      <td>{e.platform || '—'}</td>
                       <td>{e.product || '—'}</td>
                       <td><span className={`market-badge ${e.market}`}>{e.market}</span></td>
                       <td className="td-amount">{formatMoney(e.amount, e.market === 'both' ? 'nigeria' : e.market)}</td>
@@ -233,6 +238,15 @@ export default function ExpensesPage() {
               {PRODUCTS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
+          {form.category === 'ad_spend' && (
+            <label>
+              <span>Platform</span>
+              <select value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })}>
+                <option value="">— Select platform —</option>
+                {AD_PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+          )}
           {form.category === 'ad_spend' && (
             <label>
               <span>Campaign Name</span>
