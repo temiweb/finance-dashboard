@@ -4,73 +4,84 @@ import { Lock, AlertCircle } from 'lucide-react';
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleDigit = (d) => {
-    if (pin.length < 4) {
-      const newPin = pin + d;
-      setPin(newPin);
-      setError('');
-      if (newPin.length === 4) {
-        submitPin(newPin);
-      }
-    }
-  };
-
-  const handleDelete = () => {
-    setPin(pin.slice(0, -1));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError('');
-  };
-
-  const submitPin = async (p) => {
     setLoading(true);
-    const result = await login(p);
+    const result = await login(email.trim(), password);
     if (!result.success) {
-      setError(result.error);
-      setPin('');
+      setError(result.error || 'Sign in failed');
     }
     setLoading(false);
   };
 
-  const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '←'];
+  const fieldStyle = {
+    display: 'flex', flexDirection: 'column', gap: '0.35rem',
+    textAlign: 'left', marginBottom: '0.85rem',
+  };
+  const labelStyle = { fontSize: '0.8rem', opacity: 0.7 };
+  const inputStyle = {
+    padding: '0.6rem 0.75rem', borderRadius: '8px',
+    border: '1px solid var(--border)', background: 'var(--card)',
+    color: 'var(--text)', fontSize: '0.95rem',
+  };
 
   return (
     <div className="login-screen">
-      <div className="login-card">
+      <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-icon">
           <Lock size={28} />
         </div>
         <h1>Finance Dashboard</h1>
-        <p className="login-subtitle">Enter your PIN to continue</p>
+        <p className="login-subtitle">Sign in to continue</p>
 
-        <div className="pin-dots">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''} ${error ? 'error' : ''}`} />
-          ))}
-        </div>
+        <label style={fieldStyle}>
+          <span style={labelStyle}>Email</span>
+          <input
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setError(''); }}
+            disabled={loading}
+            required
+            style={inputStyle}
+          />
+        </label>
+
+        <label style={fieldStyle}>
+          <span style={labelStyle}>Password</span>
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+            disabled={loading}
+            required
+            style={inputStyle}
+          />
+        </label>
 
         {error && (
-          <div className="pin-error">
+          <div className="pin-error" style={{ marginBottom: '0.85rem' }}>
             <AlertCircle size={14} />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="pin-pad">
-          {digits.map((d, i) => (
-            <button
-              key={i}
-              className={`pin-btn ${d === '' ? 'empty' : ''} ${d === '←' ? 'delete' : ''}`}
-              onClick={() => d === '←' ? handleDelete() : d !== '' && handleDigit(d)}
-              disabled={loading || d === ''}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      </div>
+        <button
+          type="submit"
+          className="btn-primary"
+          disabled={loading || !email || !password}
+          style={{ width: '100%', justifyContent: 'center' }}
+        >
+          {loading ? 'Signing in…' : 'Sign In'}
+        </button>
+      </form>
     </div>
   );
 }

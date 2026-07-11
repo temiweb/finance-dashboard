@@ -1,72 +1,52 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
-import { hashPin } from './utils';
 
 const AuthContext = createContext(null);
-const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours
-
-function generateToken() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem('finance_session');
-    if (raw) {
-      try {
-        const { token, timestamp } = JSON.parse(raw);
-        if (token && Date.now() - timestamp < SESSION_DURATION) {
-          setIsAuthenticated(true);
-        } else {
-          localStorage.removeItem('finance_session');
-        }
-      } catch {
-        localStorage.removeItem('finance_session');
-      }
-    }
-    setLoading(false);
+    // Restore any existing session on load. The SDK reads it from localStorage
+    // and keeps the access token fresh automatically (autoRefreshToken).
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = useCallback(async (pin) => {
-    try {
-      const { data, error } = await supabase
-        .from('finance_settings')
-        .select('value')
-        .eq('key', 'pin')
-        .single();
-
-      if (error) throw error;
-
-      const storedPin = typeof data.value === 'string' ? data.value : String(data.value);
-      const hashedInput = await hashPin(pin);
-
-      if (hashedInput !== storedPin) {
-        return { success: false, error: 'Invalid PIN' };
-      }
-
-      localStorage.setItem('finance_session', JSON.stringify({
-        token: generateToken(),
-        timestamp: Date.now(),
-      }));
-      setIsAuthenticated(true);
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: 'Connection error. Check your settings.' };
-    }
+  const login = useCallback(async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('finance_session');
-    setIsAuthenticated(false);
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const changePassword = useCallback(async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, loading, login, logout }}>
+    <AuthContext.Provider value={{
+      isAuthenticated: !!session,
+      user: session?.user ?? null,
+      loading,
+      login,
+      logout,
+      changePassword,
+    }}>
       {children}
     </AuthContext.Provider>
   );

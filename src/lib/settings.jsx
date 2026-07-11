@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
-import { hashPin, PRODUCTS as DEFAULT_PRODUCTS } from './utils';
+import { PRODUCTS as DEFAULT_PRODUCTS } from './utils';
 
 const SettingsContext = createContext(null);
 
@@ -82,20 +82,6 @@ export function SettingsProvider({ children }) {
     }
   }, []);
 
-  // Update PIN — always stores as SHA-256 hash, never plaintext
-  const updatePin = useCallback(async (newPin) => {
-    try {
-      const hashed = await hashPin(newPin);
-      const { error } = await supabase
-        .from('finance_settings')
-        .upsert({ key: 'pin', value: hashed, updated_at: new Date().toISOString() });
-      if (error) throw error;
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
-  }, []);
-
   // Save exchange rate
   const saveExchangeRate = useCallback(async (rate) => {
     try {
@@ -129,7 +115,6 @@ export function SettingsProvider({ children }) {
       theme,
       setTheme,
       saveProducts,
-      updatePin,
       exchangeRate,
       saveExchangeRate,
       convertToNaira,

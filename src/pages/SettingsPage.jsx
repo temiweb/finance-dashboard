@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { useSettings } from '../lib/settings';
+import { useAuth } from '../lib/auth';
 
 export default function SettingsPage() {
-  const { products, theme, setTheme, saveProducts, updatePin, productColors, exchangeRate, saveExchangeRate } = useSettings();
+  const { products, theme, setTheme, saveProducts, productColors, exchangeRate, saveExchangeRate } = useSettings();
+  const { user, changePassword } = useAuth();
 
   // Products state
   const [editProducts, setEditProducts] = useState(products);
@@ -11,10 +13,10 @@ export default function SettingsPage() {
   const [productsSaving, setProductsSaving] = useState(false);
   const [productsMsg, setProductsMsg] = useState(null);
 
-  // PIN state
-  const [pinForm, setPinForm] = useState({ current: '', newPin: '', confirm: '' });
-  const [pinSaving, setPinSaving] = useState(false);
-  const [pinMsg, setPinMsg] = useState(null);
+  // Password state
+  const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwMsg, setPwMsg] = useState(null);
 
   // Exchange rate state
   const [editRate, setEditRate] = useState(String(exchangeRate));
@@ -58,26 +60,26 @@ export default function SettingsPage() {
     setTimeout(() => setProductsMsg(null), 3000);
   };
 
-  const handleChangePin = async () => {
-    setPinMsg(null);
-    if (pinForm.newPin.length !== 4 || !/^\d{4}$/.test(pinForm.newPin)) {
-      setPinMsg({ type: 'error', text: 'PIN must be exactly 4 digits' });
+  const handleChangePassword = async () => {
+    setPwMsg(null);
+    if (pwForm.newPw.length < 6) {
+      setPwMsg({ type: 'error', text: 'Password must be at least 6 characters' });
       return;
     }
-    if (pinForm.newPin !== pinForm.confirm) {
-      setPinMsg({ type: 'error', text: 'PINs do not match' });
+    if (pwForm.newPw !== pwForm.confirm) {
+      setPwMsg({ type: 'error', text: 'Passwords do not match' });
       return;
     }
-    setPinSaving(true);
-    const result = await updatePin(pinForm.newPin);
+    setPwSaving(true);
+    const result = await changePassword(pwForm.newPw);
     if (result.success) {
-      setPinMsg({ type: 'success', text: 'PIN updated' });
-      setPinForm({ current: '', newPin: '', confirm: '' });
+      setPwMsg({ type: 'success', text: 'Password updated' });
+      setPwForm({ newPw: '', confirm: '' });
     } else {
-      setPinMsg({ type: 'error', text: result.error });
+      setPwMsg({ type: 'error', text: result.error });
     }
-    setPinSaving(false);
-    setTimeout(() => setPinMsg(null), 3000);
+    setPwSaving(false);
+    setTimeout(() => setPwMsg(null), 4000);
   };
 
   const COLOR_PALETTE = [
@@ -221,51 +223,54 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* PIN */}
+        {/* Account / Password */}
         <div className="settings-card">
           <div className="settings-card-header">
             <Lock size={18} />
-            <h3>Change PIN</h3>
+            <h3>Account</h3>
           </div>
-          <p className="settings-desc">Update the 4-digit PIN used to access this dashboard.</p>
+          <p className="settings-desc">
+            {user?.email ? <>Signed in as <strong>{user.email}</strong>. </> : null}
+            Update the password used to sign in to this dashboard.
+          </p>
 
           <div className="pin-form">
             <label>
-              <span>New PIN</span>
+              <span>New Password</span>
               <input
                 type="password"
-                maxLength={4}
-                placeholder="••••"
-                value={pinForm.newPin}
-                onChange={(e) => setPinForm({ ...pinForm, newPin: e.target.value.replace(/\D/g, '') })}
+                autoComplete="new-password"
+                placeholder="At least 6 characters"
+                value={pwForm.newPw}
+                onChange={(e) => setPwForm({ ...pwForm, newPw: e.target.value })}
               />
             </label>
             <label>
-              <span>Confirm PIN</span>
+              <span>Confirm Password</span>
               <input
                 type="password"
-                maxLength={4}
-                placeholder="••••"
-                value={pinForm.confirm}
-                onChange={(e) => setPinForm({ ...pinForm, confirm: e.target.value.replace(/\D/g, '') })}
+                autoComplete="new-password"
+                placeholder="Re-enter password"
+                value={pwForm.confirm}
+                onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })}
               />
             </label>
           </div>
 
-          {pinMsg && (
-            <div className={`settings-msg ${pinMsg.type}`}>
-              {pinMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
-              {pinMsg.text}
+          {pwMsg && (
+            <div className={`settings-msg ${pwMsg.type}`}>
+              {pwMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+              {pwMsg.text}
             </div>
           )}
 
           <div className="settings-actions">
             <button
               className="btn-primary"
-              onClick={handleChangePin}
-              disabled={pinSaving || !pinForm.newPin || !pinForm.confirm}
+              onClick={handleChangePassword}
+              disabled={pwSaving || !pwForm.newPw || !pwForm.confirm}
             >
-              <Lock size={14} /> {pinSaving ? 'Updating…' : 'Update PIN'}
+              <Lock size={14} /> {pwSaving ? 'Updating…' : 'Update Password'}
             </button>
           </div>
         </div>

@@ -101,11 +101,3 @@ export function calcChange(current, previous) {
   if (!previous || previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
 }
-
-export async function hashPin(pin) {
-  const encoded = new TextEncoder().encode(pin);
-  const buffer = await crypto.subtle.digest('SHA-256', encoded);
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
