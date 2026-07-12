@@ -193,7 +193,7 @@ export default function ExpensesPage() {
                       <td>{e.platform || '—'}</td>
                       <td>{e.product || '—'}</td>
                       <td><span className={`market-badge ${e.market}`}>{e.market}</span></td>
-                      <td className="td-amount">{formatMoney(e.amount, e.market === 'both' ? 'nigeria' : e.market)}</td>
+                      <td className="td-amount">{formatMoney(e.amount)}</td>
                       <td className="td-desc">{e.description || '—'}</td>
                       <td className="td-actions">
                         <button className="btn-icon btn-edit" onClick={() => openEdit(e)}><Pencil size={14} /></button>
