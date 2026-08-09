@@ -1,11 +1,25 @@
 import { useState } from 'react';
-import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle, ArrowRightLeft } from 'lucide-react';
+import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle, ArrowRightLeft, FlaskConical } from 'lucide-react';
 import { useSettings } from '../lib/settings';
 import { useAuth } from '../lib/auth';
 
 export default function SettingsPage() {
-  const { products, theme, setTheme, saveProducts, productColors, exchangeRate, saveExchangeRate } = useSettings();
+  const { products, theme, setTheme, saveProducts, productColors, exchangeRate, saveExchangeRate, featureCogs, saveFeatureCogs } = useSettings();
   const { user, changePassword } = useAuth();
+
+  // COGS feature toggle state
+  const [cogsSaving, setCogsSaving] = useState(false);
+  const [cogsMsg, setCogsMsg] = useState(null);
+
+  const handleToggleCogs = async () => {
+    setCogsSaving(true);
+    const result = await saveFeatureCogs(!featureCogs);
+    setCogsMsg(result.success
+      ? { type: 'success', text: `Cost-based profit turned ${!featureCogs ? 'on' : 'off'}` }
+      : { type: 'error', text: result.error });
+    setCogsSaving(false);
+    setTimeout(() => setCogsMsg(null), 3000);
+  };
 
   // Products state
   const [editProducts, setEditProducts] = useState(products);
@@ -117,6 +131,44 @@ export default function SettingsPage() {
               <span>Light</span>
             </button>
           </div>
+        </div>
+
+        {/* COGS feature toggle */}
+        <div className="settings-card">
+          <div className="settings-card-header">
+            <FlaskConical size={18} />
+            <h3>Cost-Based Profit (Beta)</h3>
+          </div>
+          <p className="settings-desc">
+            When on, profit is calculated as revenue − cost of goods sold (COGS) − running costs,
+            and stock purchases stop counting as a monthly expense. Turn it on to compare against
+            the current numbers; turn it off to go back instantly. Requires the cost data to be set up.
+          </p>
+
+          <div className="theme-toggle-group">
+            <button
+              className={`theme-option ${featureCogs ? 'active' : ''}`}
+              onClick={() => { if (!featureCogs) handleToggleCogs(); }}
+              disabled={cogsSaving}
+            >
+              <Check size={18} />
+              <span>On</span>
+            </button>
+            <button
+              className={`theme-option ${!featureCogs ? 'active' : ''}`}
+              onClick={() => { if (featureCogs) handleToggleCogs(); }}
+              disabled={cogsSaving}
+            >
+              <span>Off</span>
+            </button>
+          </div>
+
+          {cogsMsg && (
+            <div className={`settings-msg ${cogsMsg.type}`}>
+              {cogsMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+              {cogsMsg.text}
+            </div>
+          )}
         </div>
 
         {/* Products */}

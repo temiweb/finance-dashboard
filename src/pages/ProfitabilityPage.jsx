@@ -3,11 +3,11 @@ import { PieChart as PieIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort } from '../lib/utils';
+import { formatMoney, formatMoneyShort, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function ProfitabilityPage() {
-  const { convertToNaira } = useSettings();
+  const { convertToNaira, featureCogs } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -18,30 +18,53 @@ export default function ProfitabilityPage() {
 
   const { overall, byProduct, byMarket } = useMemo(() => {
     const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
-    const totalExp = expenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
+
+    // When COGS is on, stock purchases are represented by COGS (cost as it sells),
+    // so the stock-purchase expense category is dropped from opex to avoid counting
+    // that cost twice. When off, everything behaves exactly as before.
+    const opexExpenses = featureCogs
+      ? expenses.filter(e => e.category !== STOCK_EXPENSE_CATEGORY)
+      : expenses;
+    const totalOpex = opexExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalExp = featureCogs ? (totalCogs + totalOpex) : totalOpex;
     const profit = totalRev - totalExp;
     const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
 
     // By product (all converted to ₦)
     const prodRevMap = {};
+    const prodCogsMap = {};
     const prodExpMap = {};
-    revenue.forEach(r => { prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market); });
-    expenses.forEach(e => { if (e.product) prodExpMap[e.product] = (prodExpMap[e.product] || 0) + Number(e.amount); });
+    revenue.forEach(r => {
+      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
+      prodCogsMap[r.product] = (prodCogsMap[r.product] || 0) + (r.cogs || 0);
+    });
+    opexExpenses.forEach(e => { if (e.product) prodExpMap[e.product] = (prodExpMap[e.product] || 0) + Number(e.amount); });
 
-    const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap)])];
-    const byProduct = allProducts.map(p => ({
-      name: p.length > 12 ? p.slice(0, 11) + '…' : p,
-      fullName: p,
-      revenue: prodRevMap[p] || 0,
-      expenses: prodExpMap[p] || 0,
-      profit: (prodRevMap[p] || 0) - (prodExpMap[p] || 0),
-    }));
+    const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap), ...Object.keys(prodCogsMap)])];
+    const byProduct = allProducts.map(p => {
+      const rev = prodRevMap[p] || 0;
+      const cogs = featureCogs ? (prodCogsMap[p] || 0) : 0;
+      const exp = (prodExpMap[p] || 0) + cogs;
+      return {
+        name: p.length > 12 ? p.slice(0, 11) + '…' : p,
+        fullName: p,
+        revenue: rev,
+        cogs,
+        expenses: exp,
+        profit: rev - exp,
+      };
+    });
 
     // By market (all converted to ₦)
     const mktRevMap = {};
+    const mktCogsMap = {};
     const mktExpMap = {};
-    revenue.forEach(r => { mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market); });
-    expenses.forEach(e => {
+    revenue.forEach(r => {
+      mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market);
+      mktCogsMap[r.market] = (mktCogsMap[r.market] || 0) + (r.cogs || 0);
+    });
+    opexExpenses.forEach(e => {
       if (e.market === 'both') {
         mktExpMap['nigeria'] = (mktExpMap['nigeria'] || 0) + Number(e.amount) / 2;
         mktExpMap['ghana'] = (mktExpMap['ghana'] || 0) + Number(e.amount) / 2;
@@ -50,15 +73,14 @@ export default function ProfitabilityPage() {
       }
     });
 
-    const byMarket = ['nigeria', 'ghana'].map(m => ({
-      name: m.charAt(0).toUpperCase() + m.slice(1),
-      revenue: mktRevMap[m] || 0,
-      expenses: mktExpMap[m] || 0,
-      profit: (mktRevMap[m] || 0) - (mktExpMap[m] || 0),
-    }));
+    const byMarket = ['nigeria', 'ghana'].map(m => {
+      const rev = mktRevMap[m] || 0;
+      const exp = (mktExpMap[m] || 0) + (featureCogs ? (mktCogsMap[m] || 0) : 0);
+      return { name: m.charAt(0).toUpperCase() + m.slice(1), revenue: rev, expenses: exp, profit: rev - exp };
+    });
 
-    return { overall: { totalRev, totalExp, profit, margin }, byProduct, byMarket };
-  }, [revenue, expenses, convertToNaira]);
+    return { overall: { totalRev, totalCogs, totalOpex, totalExp, profit, margin }, byProduct, byMarket };
+  }, [revenue, expenses, convertToNaira, featureCogs]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
@@ -85,9 +107,24 @@ export default function ProfitabilityPage() {
 
       {loading ? <Loader /> : (
         <>
-          <div className="kpi-grid kpi-grid-3">
+          {featureCogs && (
+            <div className="form-preview" style={{ marginBottom: '1rem' }}>
+              Cost-based profit is <strong>on</strong>: profit = revenue − cost of goods sold (COGS) − running costs.
+              Stock purchases logged under “Import / Shipping” are excluded from running costs (they’re counted as COGS as units sell).
+            </div>
+          )}
+          <div className={featureCogs ? 'kpi-grid kpi-grid-4' : 'kpi-grid kpi-grid-3'}>
             <KpiCard title="Revenue" value={formatMoney(overall.totalRev)} icon={TrendingUp} color="#4ECDC4" />
-            <KpiCard title="Total Costs" value={formatMoney(overall.totalExp)} icon={TrendingDown} color="#E8594F" />
+            {featureCogs && (
+              <KpiCard title="COGS" value={formatMoney(overall.totalCogs)} subtitle="Cost of goods sold" icon={TrendingDown} color="#F4A142" />
+            )}
+            <KpiCard
+              title={featureCogs ? 'Running Costs' : 'Total Costs'}
+              value={formatMoney(featureCogs ? overall.totalOpex : overall.totalExp)}
+              subtitle={featureCogs ? 'Ads, delivery, opex' : undefined}
+              icon={TrendingDown}
+              color="#E8594F"
+            />
             <KpiCard
               title="Net Profit"
               value={formatMoney(overall.profit)}

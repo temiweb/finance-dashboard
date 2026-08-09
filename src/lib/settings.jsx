@@ -15,6 +15,7 @@ export function SettingsProvider({ children }) {
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [theme, setThemeState] = useState(() => localStorage.getItem('finance_theme') || 'dark');
   const [exchangeRate, setExchangeRate] = useState(250); // default GH₵1 = ₦250
+  const [featureCogs, setFeatureCogs] = useState(false); // cost-based profit (COGS) — dark until turned on
   const [loading, setLoading] = useState(true);
 
   // Apply theme to DOM
@@ -30,7 +31,7 @@ export function SettingsProvider({ children }) {
         const { data, error } = await supabase
           .from('finance_settings')
           .select('key, value')
-          .in('key', ['products', 'exchange_rate']);
+          .in('key', ['products', 'exchange_rate', 'feature_cogs']);
 
         if (!error && data) {
           const productsRow = data.find(r => r.key === 'products');
@@ -49,6 +50,8 @@ export function SettingsProvider({ children }) {
               : Number(rateRow.value);
             if (parsed > 0) setExchangeRate(parsed);
           }
+          const cogsRow = data.find(r => r.key === 'feature_cogs');
+          if (cogsRow) setFeatureCogs(cogsRow.value === true || cogsRow.value === 'true');
         }
       } catch (e) {
         console.warn('Failed to load settings:', e);
@@ -98,6 +101,20 @@ export function SettingsProvider({ children }) {
     }
   }, []);
 
+  // Toggle the cost-based profit (COGS) feature
+  const saveFeatureCogs = useCallback(async (on) => {
+    try {
+      const { error } = await supabase
+        .from('finance_settings')
+        .upsert({ key: 'feature_cogs', value: !!on, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      setFeatureCogs(!!on);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }, []);
+
   // Convert GH₵ to ₦
   const convertToNaira = useCallback((amount, market) => {
     if (market === 'ghana') return Number(amount) * exchangeRate;
@@ -118,6 +135,8 @@ export function SettingsProvider({ children }) {
       exchangeRate,
       saveExchangeRate,
       convertToNaira,
+      featureCogs,
+      saveFeatureCogs,
       loading,
     }}>
       {children}

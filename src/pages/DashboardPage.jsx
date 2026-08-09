@@ -3,11 +3,11 @@ import { DollarSign, TrendingUp, ShoppingCart, Wallet, PieChart, Megaphone } fro
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell } from 'recharts';
 import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
 import { useRevenue, useExpenses, useCashFlow } from '../hooks/useData';
-import { formatMoney, formatMoneyShort, CATEGORY_COLORS } from '../lib/utils';
+import { formatMoney, formatMoneyShort, CATEGORY_COLORS, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
 import { useSettings } from '../lib/settings';
 
 export default function DashboardPage() {
-  const { productColors: PRODUCT_COLORS, convertToNaira } = useSettings();
+  const { productColors: PRODUCT_COLORS, convertToNaira, featureCogs } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -20,16 +20,30 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
-    const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
     const totalAdSpend = expenses.filter(e => e.category === 'ad_spend').reduce((s, e) => s + Number(e.amount), 0);
+    const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
+
+    // Units = quantity sold; Orders = number of delivered orders (distinct order records)
+    const totalUnits = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
+    const deliveredOrders = revenue.filter(r => r.is_order).length;
+    const deliveredUnits = revenue.filter(r => r.is_order).reduce((s, r) => s + (r.delivered_qty || r.quantity || 1), 0);
+    const avgUnitsPerOrder = deliveredOrders > 0 ? deliveredUnits / deliveredOrders : 0;
+
+    // Cost-based profit when the feature is on; otherwise the original revenue − all expenses.
+    const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
+    const opex = featureCogs
+      ? expenses.filter(e => e.category !== STOCK_EXPENSE_CATEGORY).reduce((s, e) => s + Number(e.amount), 0)
+      : expenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalExpenses = featureCogs ? (totalCogs + opex) : opex;
     const totalProfit = totalRevenue - totalExpenses;
     const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
-    const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
-    const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
+    const costPerOrder = deliveredOrders > 0 ? totalCogs / deliveredOrders : 0;
+    const profitPerOrder = deliveredOrders > 0 ? totalProfit / deliveredOrders : 0;
 
-    return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalOrders, cashCollected };
-  }, [revenue, expenses, cashflow, convertToNaira]);
+    return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalUnits,
+      deliveredOrders, deliveredUnits, avgUnitsPerOrder, totalCogs, costPerOrder, profitPerOrder, cashCollected };
+  }, [revenue, expenses, cashflow, convertToNaira, featureCogs]);
 
   // Revenue by product chart data (converted to ₦)
   const revenueByProduct = useMemo(() => {
@@ -79,12 +93,22 @@ export default function DashboardPage() {
       {loading ? <Loader /> : (
         <>
           <div className="kpi-grid">
-            <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.totalOrders} orders`} icon={TrendingUp} color="#4ECDC4" />
-            <KpiCard title="Expenses" value={formatMoney(stats.totalExpenses)} subtitle={`Ad spend: ${formatMoney(stats.totalAdSpend)}`} icon={DollarSign} color="#E8594F" />
+            <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.deliveredOrders.toLocaleString()} orders`} icon={TrendingUp} color="#4ECDC4" />
+            <KpiCard
+              title={featureCogs ? 'Costs (COGS + opex)' : 'Expenses'}
+              value={formatMoney(stats.totalExpenses)}
+              subtitle={featureCogs ? `COGS: ${formatMoney(stats.totalCogs)}` : `Ad spend: ${formatMoney(stats.totalAdSpend)}`}
+              icon={DollarSign}
+              color="#E8594F"
+            />
             <KpiCard title="Profit" value={formatMoney(stats.totalProfit)} subtitle={`${stats.margin.toFixed(1)}% margin`} icon={PieChart} color={stats.totalProfit >= 0 ? '#4ECDC4' : '#E8594F'} />
             <KpiCard title="ROAS" value={stats.roas > 0 ? `${stats.roas.toFixed(1)}x` : '—'} subtitle="Return on ad spend" icon={Megaphone} color="#F4A142" />
             <KpiCard title="Cash Received" value={formatMoney(stats.cashCollected)} subtitle="From agents & exchangers" icon={Wallet} color="#7B68EE" />
-            <KpiCard title="Orders" value={stats.totalOrders.toLocaleString()} subtitle={`Avg: ${stats.totalOrders > 0 ? formatMoney(stats.totalRevenue / stats.totalOrders) : '—'}`} icon={ShoppingCart} color="#45B7D1" />
+            <KpiCard title="Units" value={stats.totalUnits.toLocaleString()} subtitle={`${stats.deliveredUnits.toLocaleString()} delivered`} icon={ShoppingCart} color="#26A69A" />
+            <KpiCard title="Orders" value={stats.deliveredOrders.toLocaleString()} subtitle={`${stats.avgUnitsPerOrder.toFixed(1)} units/order`} icon={ShoppingCart} color="#45B7D1" />
+            {featureCogs && (
+              <KpiCard title="Profit / Order" value={formatMoney(stats.profitPerOrder)} subtitle={`Cost/order: ${formatMoney(stats.costPerOrder)}`} icon={PieChart} color={stats.profitPerOrder >= 0 ? '#4ECDC4' : '#E8594F'} />
+            )}
           </div>
 
           <div className="charts-grid">

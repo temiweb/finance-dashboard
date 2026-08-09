@@ -18,7 +18,7 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
 
         let crmQuery = supabase
           .from('orders')
-          .select('id, product, qty, price, country, status, actual_price_collected, delivery_fee, created_at')
+          .select('id, product, qty, price, country, status, actual_price_collected, actual_qty_delivered, delivery_fee, unit_cost, created_at')
           .eq('status', 'delivered')
           .gte('created_at', `${from}T00:00:00`)
           .lte('created_at', `${to}T23:59:59`)
@@ -44,6 +44,8 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
         const crmRows = (crmResult.data || []).map(order => {
           const collected = Number(order.actual_price_collected) || (Number(order.price) * (order.qty || 1));
           const deliveryFee = Number(order.delivery_fee) || 0;
+          const deliveredQty = Number(order.actual_qty_delivered) || Number(order.qty) || 1;
+          const unitCost = order.unit_cost != null ? Number(order.unit_cost) : null;
           return {
             id: order.id,
             date: order.created_at?.split('T')[0],
@@ -53,6 +55,10 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
             unit_price: Number(order.price) || 0,
             total_amount: collected - deliveryFee,
             delivery_fee: deliveryFee,
+            delivered_qty: deliveredQty,
+            unit_cost: unitCost,
+            cogs: unitCost != null ? unitCost * deliveredQty : 0,
+            is_order: true,
             source: 'crm',
             status: order.status,
             notes: deliveryFee > 0 ? `Delivery fee: ₦${deliveryFee.toLocaleString()}` : null,
