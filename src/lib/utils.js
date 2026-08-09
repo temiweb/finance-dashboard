@@ -22,10 +22,12 @@ export const PLATFORM_COLORS = {
 
 // Expense category that represents buying stock. When cost-based profit (COGS)
 // is on, this is excluded from running costs because it's counted as COGS instead.
-export const STOCK_EXPENSE_CATEGORY = 'import_shipping';
+// Kept separate from Import/Shipping (logistics) so genuine logistics costs still count.
+export const STOCK_EXPENSE_CATEGORY = 'stock_purchase';
 
 export const EXPENSE_CATEGORIES = [
   { value: 'ad_spend', label: 'Ad Spend' },
+  { value: 'stock_purchase', label: 'Stock Purchase' },
   { value: 'import_shipping', label: 'Import / Shipping' },
   { value: 'delivery_commission', label: 'Delivery / Commission' },
   { value: 'packaging', label: 'Packaging' },
@@ -35,6 +37,7 @@ export const EXPENSE_CATEGORIES = [
 
 export const CATEGORY_COLORS = {
   ad_spend: '#E8594F',
+  stock_purchase: '#8D6E63',
   import_shipping: '#F4A142',
   delivery_commission: '#4ECDC4',
   packaging: '#7B68EE',

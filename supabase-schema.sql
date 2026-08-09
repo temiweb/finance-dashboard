@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   category TEXT NOT NULL CHECK (category IN (
-    'ad_spend', 'import_shipping', 'delivery_commission',
+    'ad_spend', 'stock_purchase', 'import_shipping', 'delivery_commission',
     'packaging', 'tools_subscriptions', 'other'
   )),
   product TEXT,  -- nullable for general expenses
