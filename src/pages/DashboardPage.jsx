@@ -106,7 +106,7 @@ export default function DashboardPage() {
               color="#E8594F"
             />
             <KpiCard title="Profit" value={formatMoney(stats.totalProfit)} subtitle={`${stats.margin.toFixed(1)}% margin`} icon={PieChart} color={stats.totalProfit >= 0 ? '#4ECDC4' : '#E8594F'} />
-            <KpiCard title="ROAS" value={stats.roas > 0 ? `${stats.roas.toFixed(1)}x` : '—'} subtitle="Return on ad spend" icon={Megaphone} color="#F4A142" />
+            <KpiCard title="Blended ROAS" value={stats.roas > 0 ? `${stats.roas.toFixed(1)}x` : '—'} subtitle="Period revenue ÷ ad spend" icon={Megaphone} color="#F4A142" />
             <KpiCard title="Cash Received" value={formatMoney(stats.cashCollected)} subtitle="From agents & exchangers" icon={Wallet} color="#7B68EE" />
             <KpiCard title="Units" value={stats.totalUnits.toLocaleString()} subtitle={`${stats.deliveredUnits.toLocaleString()} delivered`} icon={ShoppingCart} color="#26A69A" />
             <KpiCard

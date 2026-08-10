@@ -14,7 +14,7 @@ function AdsTooltip({ active, payload }) {
       <p className="chart-tooltip-label">{data.fullName || data.name}</p>
       <p>Ad Spend: {formatMoney(data.adSpend || data.spend)}</p>
       {data.revenue !== undefined && <p>Revenue: {formatMoney(data.revenue)}</p>}
-      {data.roas !== undefined && <p>ROAS: {data.roas.toFixed(1)}x</p>}
+      {data.roas !== undefined && <p>Blended ROAS: {data.roas.toFixed(1)}x</p>}
     </div>
   );
 }
@@ -110,7 +110,7 @@ export default function AdsPage() {
       {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); }} /> : (
         <>
           <div className="kpi-grid kpi-grid-3">
-            <KpiCard title="ROAS" value={adData.roas > 0 ? `${adData.roas.toFixed(1)}x` : '—'} subtitle={`Ad spend: ${formatMoney(adData.totalAdSpend)}`} icon={Megaphone} color="#F4A142" />
+            <KpiCard title="Blended ROAS" value={adData.roas > 0 ? `${adData.roas.toFixed(1)}x` : '—'} subtitle={`Ad spend: ${formatMoney(adData.totalAdSpend)}`} icon={Megaphone} color="#F4A142" />
             <KpiCard
               title="Cost / Delivered Order"
               value={!adData.hasUnknownDeliveredOrders && adData.costPerDeliveredOrder > 0 ? formatMoney(adData.costPerDeliveredOrder) : '—'}
@@ -118,7 +118,7 @@ export default function AdsPage() {
               icon={Target}
               color="#E8594F"
             />
-            <KpiCard title="Revenue from Ads" value={formatMoney(adData.totalRevenue)} subtitle={`AOV: ${adData.aov > 0 ? formatMoney(adData.aov) : '—'}`} icon={TrendingUp} color="#4ECDC4" />
+            <KpiCard title="Revenue in Period" value={formatMoney(adData.totalRevenue)} subtitle={`AOV: ${adData.aov > 0 ? formatMoney(adData.aov) : '—'}`} icon={TrendingUp} color="#4ECDC4" />
           </div>
 
           {adData.byProduct.length === 0 && adData.byCampaign.length === 0 ? (
@@ -127,7 +127,7 @@ export default function AdsPage() {
             <div className="charts-grid">
               {adData.byProduct.length > 0 && (
                 <div className="chart-card">
-                  <h3>ROAS by Product</h3>
+                  <h3>Blended ROAS by Product</h3>
                   <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={adData.byProduct} margin={{ top: 10, right: 10, bottom: 30, left: 10 }}>
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
@@ -190,7 +190,7 @@ export default function AdsPage() {
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Delivered Orders</th><th>ROAS</th><th>Cost / Delivered Order</th></tr>
+                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Delivered Orders</th><th>Blended ROAS</th><th>Cost / Delivered Order</th></tr>
                   </thead>
                   <tbody>
                     {adData.byProduct.map((p, i) => (
