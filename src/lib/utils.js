@@ -1,4 +1,4 @@
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subMonths, subWeeks } from 'date-fns';
 
 export const MARKETS = ['nigeria', 'ghana'];
 export const CURRENCIES = { nigeria: '₦', ghana: 'GH₵' };
@@ -86,11 +86,22 @@ export function getDateRange(period, customRange) {
   switch (period) {
     case 'today':
       return { from: format(today, 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
+    case 'yesterday': {
+      const yesterday = subDays(today, 1);
+      return { from: format(yesterday, 'yyyy-MM-dd'), to: format(yesterday, 'yyyy-MM-dd') };
+    }
     case 'week':
       return {
         from: format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
         to: format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
       };
+    case 'lastWeek': {
+      const lastWeek = subWeeks(today, 1);
+      return {
+        from: format(startOfWeek(lastWeek, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+        to: format(endOfWeek(lastWeek, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
+      };
+    }
     case 'month':
       return {
         from: format(startOfMonth(today), 'yyyy-MM-dd'),
@@ -101,10 +112,22 @@ export function getDateRange(period, customRange) {
         from: format(subDays(today, 30), 'yyyy-MM-dd'),
         to: format(today, 'yyyy-MM-dd'),
       };
+    case 'lastMonth': {
+      const lastMonth = subMonths(today, 1);
+      return {
+        from: format(startOfMonth(lastMonth), 'yyyy-MM-dd'),
+        to: format(endOfMonth(lastMonth), 'yyyy-MM-dd'),
+      };
+    }
     case 'last3months':
       return {
         from: format(subMonths(today, 3), 'yyyy-MM-dd'),
         to: format(today, 'yyyy-MM-dd'),
+      };
+    case 'year':
+      return {
+        from: format(startOfYear(today), 'yyyy-MM-dd'),
+        to: format(endOfYear(today), 'yyyy-MM-dd'),
       };
     case 'all':
       return { from: '2020-01-01', to: format(today, 'yyyy-MM-dd') };

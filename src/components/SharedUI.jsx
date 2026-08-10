@@ -30,10 +30,14 @@ import { useState as usePeriodState } from 'react';
 
 const PERIODS = [
   { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
   { value: 'week', label: 'This Week' },
+  { value: 'lastWeek', label: 'Last Week' },
   { value: 'month', label: 'This Month' },
+  { value: 'lastMonth', label: 'Last Month' },
   { value: 'last30', label: 'Last 30 Days' },
   { value: 'last3months', label: 'Last 3 Months' },
+  { value: 'year', label: 'This Year' },
   { value: 'all', label: 'All Time' },
 ];
 
