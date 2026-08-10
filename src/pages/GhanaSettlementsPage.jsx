@@ -42,7 +42,7 @@ export default function GhanaSettlementsPage() {
     if (Number(form.deliveryFees) < 0 || summary.expectedPayout <= 0) return setFormError('Check delivery fees and deductions; expected payout must be greater than zero.');
     if (Number(form.reportingRate) <= 0) return setFormError('Enter a valid GHS-to-Naira reporting rate.');
     if (form.lines.some(line => !line.product || Number(line.units) <= 0 || Number(line.orders) <= 0 || Number(line.netRevenue) <= 0)) return setFormError('Each product row needs product, units, delivered orders, and net revenue.');
-    if (Math.abs(summary.lineRevenue - summary.netSales) > 0.01) return setFormError(`Product net revenue must equal GHS ${summary.netSales.toLocaleString()} after delivery fees.`);
+    if (Math.abs(summary.lineRevenue - summary.expectedPayout) > 0.01) return setFormError(`Product revenue must equal the final amount due: GHS ${summary.expectedPayout.toLocaleString()}.`);
     setSaving(true);
     setFormError('');
     try {
@@ -117,16 +117,16 @@ export default function GhanaSettlementsPage() {
           <label><span>Tax (GHS)</span><input type="number" min="0" value={form.tax} onChange={event => setForm({ ...form, tax: event.target.value })} /></label>
           <label><span>Reporting Rate (NGN per GHS)</span><input type="number" min="0.01" step="0.01" value={form.reportingRate} onChange={event => setForm({ ...form, reportingRate: event.target.value })} /></label>
         </div>
-        <div className="settlement-summary">Net sales after delivery fees: {formatMoney(summary.netSales, 'ghana')} · Expected payout: {formatMoney(summary.expectedPayout, 'ghana')}</div>
+        <div className="settlement-summary">After delivery fees: {formatMoney(summary.netSales, 'ghana')} · Amount Due Vendor: {formatMoney(summary.expectedPayout, 'ghana')}</div>
         <div className="settlement-lines"><div className="settlement-lines-header"><h4>Product Revenue Breakdown</h4><button className="btn-secondary btn-sm" onClick={() => setForm({ ...form, lines: [...form.lines, { product: products[0] || '', units: '', orders: '', netRevenue: '' }] })}>Add Product</button></div>
           {form.lines.map((line, index) => <div className="settlement-line" key={index}>
             <select value={line.product} onChange={event => updateLine(index, { product: event.target.value })}>{products.map(product => <option key={product} value={product}>{product}</option>)}</select>
             <input type="number" min="1" placeholder="Units" value={line.units} onChange={event => updateLine(index, { units: event.target.value })} />
             <input type="number" min="1" placeholder="Orders" value={line.orders} onChange={event => updateLine(index, { orders: event.target.value })} />
-            <input type="number" min="0" placeholder="Net revenue GHS" value={line.netRevenue} onChange={event => updateLine(index, { netRevenue: event.target.value })} />
+            <input type="number" min="0" placeholder="Final revenue GHS" value={line.netRevenue} onChange={event => updateLine(index, { netRevenue: event.target.value })} />
             {form.lines.length > 1 && <button className="btn-icon" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })}>×</button>}
           </div>)}
-          <p className="form-hint">Product net revenue should add up to total products minus delivery fees. This does not create cash flow yet.</p>
+          <p className="form-hint">Enter each product's final amount after delivery, commission, COD, vendor expenses, and tax. Product revenue must add up to Amount Due Vendor. This does not create cash flow yet.</p>
         </div>
         <FormError message={formError} /><div className="form-actions"><button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Bill'}</button></div>
       </Modal>

@@ -256,26 +256,8 @@ export function useGhanaSettlements() {
 
 export async function createGhanaSettlement(settlement) {
   const settlementId = crypto.randomUUID();
-  const created = { revenue: [], expenses: [], cashFlow: null };
-  const note = `Ghana settlement: ${settlement.partner}`;
-  const expenseRows = [
-    ['vendorExpenses', 'other', 'Vendor expenses'],
-    ['commission', 'delivery_commission', 'Delivery partner commission'],
-    ['codFee', 'delivery_commission', 'COD fee'],
-    ['tax', 'other', 'VAT, NHIL, and GETFund tax'],
-  ]
-    .filter(([field]) => Number(settlement[field]) > 0)
-    .map(([field, category, description]) => ({
-      date: settlement.billingDate,
-      category,
-      market: 'ghana',
-      nigeria_share: 0,
-      amount: Number(settlement[field]) * settlement.reportingRate,
-      original_amount: Number(settlement[field]),
-      original_currency: 'GHS',
-      settlement_id: settlementId,
-      description: `${description} · ${note}`,
-    }));
+  const created = { revenue: [] };
+  const note = `Ghana settlement: ${settlement.partner} · Delivery GHS ${settlement.deliveryFees} · Vendor GHS ${settlement.vendorExpenses} · Commission GHS ${settlement.commission} · COD GHS ${settlement.codFee} · Tax GHS ${settlement.tax}`;
 
   try {
     const revenueRows = settlement.lines.map(line => ({
@@ -295,12 +277,6 @@ export async function createGhanaSettlement(settlement) {
     if (revenueResult.error) throw revenueResult.error;
     created.revenue = revenueResult.data || [];
 
-    if (expenseRows.length > 0) {
-      const expenseResult = await supabase.from('finance_expenses').insert(expenseRows).select('id');
-      if (expenseResult.error) throw expenseResult.error;
-      created.expenses = expenseResult.data || [];
-    }
-
     const cashFlowResult = await supabase.from('finance_cash_flow').insert([{
       date: settlement.billingDate,
       billing_date: settlement.billingDate,
@@ -317,7 +293,6 @@ export async function createGhanaSettlement(settlement) {
   } catch (createError) {
     await Promise.all([
       ...created.revenue.map(row => supabase.from('finance_revenue').delete().eq('id', row.id)),
-      ...created.expenses.map(row => supabase.from('finance_expenses').delete().eq('id', row.id)),
     ]);
     throw createError;
   }
