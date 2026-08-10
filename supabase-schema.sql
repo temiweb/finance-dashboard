@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS finance_revenue (
   unit_price NUMERIC(12,2) NOT NULL,
   total_amount NUMERIC(12,2) NOT NULL,
   exchange_rate NUMERIC(12,4) CHECK (exchange_rate IS NULL OR exchange_rate > 0),
+  settlement_id UUID,
   source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'crm')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -39,6 +40,9 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   supplier TEXT,
   units_received INTEGER CHECK (units_received IS NULL OR units_received > 0),
   received_date DATE,
+  settlement_id UUID,
+  original_amount NUMERIC(12,2),
+  original_currency TEXT,
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -50,6 +54,11 @@ CREATE TABLE IF NOT EXISTS finance_cash_flow (
   source TEXT NOT NULL,
   market TEXT NOT NULL CHECK (market IN ('nigeria', 'ghana')),
   amount NUMERIC(12,2) NOT NULL,
+  settlement_id UUID,
+  status TEXT NOT NULL DEFAULT 'received' CHECK (status IN ('pending', 'received')),
+  billing_date DATE,
+  expected_amount_ghs NUMERIC(12,2),
+  exchange_rate NUMERIC(12,4),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -192,6 +192,13 @@ html, body, #root {
 .batch-status { display: inline-block; padding: 0.2rem 0.45rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
 .batch-status.transit { background: #f4a1421f; color: #c77812; }
 .batch-status.received { background: #4ecdc41f; color: #238c83; }
+.settlement-summary { margin: 1rem 0; padding: 0.75rem; border-radius: 8px; background: var(--bg-hover); font-size: 0.85rem; font-weight: 600; }
+.settlement-lines { margin-top: 1.25rem; }
+.settlement-lines-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
+.settlement-lines-header h4 { margin: 0; font-size: 0.9rem; }
+.settlement-line { display: grid; grid-template-columns: minmax(120px, 1.5fr) repeat(3, minmax(80px, 1fr)) auto; gap: 0.5rem; margin-bottom: 0.5rem; }
+.settlement-line input, .settlement-line select { min-width: 0; }
+@media (max-width: 700px) { .settlement-line { grid-template-columns: 1fr 1fr; } }
 
 .page-filters {
   display: flex;

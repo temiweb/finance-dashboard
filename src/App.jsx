@@ -12,6 +12,7 @@ import AdsPage from './pages/AdsPage';
 import CashFlowPage from './pages/CashFlowPage';
 import InventoryPage from './pages/InventoryPage';
 import ReviewPage from './pages/ReviewPage';
+import GhanaSettlementsPage from './pages/GhanaSettlementsPage';
 import SettingsPage from './pages/SettingsPage';
 import { Loader } from './components/SharedUI';
 import './index.css';
@@ -32,6 +33,7 @@ function AppContent() {
     cashflow: CashFlowPage,
     inventory: InventoryPage,
     review: ReviewPage,
+    ghanaSettlements: GhanaSettlementsPage,
     settings: SettingsPage,
   };
 
