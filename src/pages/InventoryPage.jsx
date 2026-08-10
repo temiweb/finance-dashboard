@@ -82,7 +82,7 @@ export default function InventoryPage() {
   };
 
   const handleSave = async () => {
-    if (!form.date || !form.product || !form.batchName.trim()) return setFormError('Payment date, product, and batch name are required.');
+    if (!form.date || !form.product || !form.batchName.trim()) return setFormError('Stock purchase date, product, and batch name are required.');
     if (!Number.isInteger(Number(form.unitsReceived)) || Number(form.unitsReceived) <= 0) return setFormError('Units expected must be a whole number greater than zero.');
     if (Number(form.stockCost) <= 0) return setFormError('Enter a stock purchase cost greater than zero.');
     if (form.market === 'both' && (Number(form.nigeriaShare) < 0 || Number(form.nigeriaShare) > 100)) return setFormError('Nigeria allocation must be between 0% and 100%.');
@@ -228,7 +228,7 @@ export default function InventoryPage() {
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Inventory Batch">
         <div className="form-grid">
-          <label><span>1688 Payment Date</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
+          <label><span>Stock Purchase Date</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
           <label>
             <span>Product</span>
             <select value={form.product} onChange={(event) => setForm({ ...form, product: event.target.value })}>
@@ -248,7 +248,7 @@ export default function InventoryPage() {
           <label><span>Stock Purchase Cost</span><input type="number" min="0" value={form.stockCost} onChange={(event) => setForm({ ...form, stockCost: event.target.value })} /></label>
         </div>
         <div className="form-preview">Initial cost: {formatMoney(totalCost)} · Initial cost per unit: {unitCost > 0 ? formatMoney(unitCost) : '—'}</div>
-        <p className="form-hint">Save the 1688 payment now. Add freight, duty, and other costs later on their actual payment dates, then mark the batch received.</p>
+        <p className="form-hint">Save the stock purchase now. Add freight, duty, and other costs later on their actual payment dates, then mark the batch received.</p>
         <FormError message={formError} />
         <div className="form-actions">
           <button className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
