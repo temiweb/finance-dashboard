@@ -3,7 +3,7 @@ import { PieChart as PieIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
+import { formatMoney, formatMoneyShort, getExpenseAmount, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function ProfitabilityTooltip({ active, payload, label }) {
@@ -39,7 +39,7 @@ export default function ProfitabilityPage() {
     const opexExpenses = featureCogs
       ? expenses.filter(e => e.category !== STOCK_EXPENSE_CATEGORY)
       : expenses;
-    const totalOpex = opexExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalOpex = opexExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalExp = featureCogs ? (totalCogs + totalOpex) : totalOpex;
     const profit = totalRev - totalExp;
     const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
@@ -52,7 +52,11 @@ export default function ProfitabilityPage() {
       prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
       prodCogsMap[r.product] = (prodCogsMap[r.product] || 0) + (r.cogs || 0);
     });
-    opexExpenses.forEach(e => { if (e.product) prodExpMap[e.product] = (prodExpMap[e.product] || 0) + Number(e.amount); });
+    opexExpenses.forEach(expense => {
+      if (expense.product) {
+        prodExpMap[expense.product] = (prodExpMap[expense.product] || 0) + getExpenseAmount(expense, market);
+      }
+    });
 
     const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap), ...Object.keys(prodCogsMap)])];
     const byProduct = allProducts.map(p => {
@@ -77,23 +81,21 @@ export default function ProfitabilityPage() {
       mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market);
       mktCogsMap[r.market] = (mktCogsMap[r.market] || 0) + (r.cogs || 0);
     });
-    opexExpenses.forEach(e => {
-      if (e.market === 'both') {
-        mktExpMap['nigeria'] = (mktExpMap['nigeria'] || 0) + Number(e.amount) / 2;
-        mktExpMap['ghana'] = (mktExpMap['ghana'] || 0) + Number(e.amount) / 2;
-      } else {
-        mktExpMap[e.market] = (mktExpMap[e.market] || 0) + Number(e.amount);
-      }
+    const visibleMarkets = market === 'all' ? ['nigeria', 'ghana'] : [market];
+    opexExpenses.forEach(expense => {
+      visibleMarkets.forEach(currentMarket => {
+        mktExpMap[currentMarket] = (mktExpMap[currentMarket] || 0) + getExpenseAmount(expense, currentMarket);
+      });
     });
 
-    const byMarket = ['nigeria', 'ghana'].map(m => {
+    const byMarket = visibleMarkets.map(m => {
       const rev = mktRevMap[m] || 0;
       const exp = (mktExpMap[m] || 0) + (featureCogs ? (mktCogsMap[m] || 0) : 0);
       return { name: m.charAt(0).toUpperCase() + m.slice(1), revenue: rev, expenses: exp, profit: rev - exp };
     });
 
     return { overall: { totalRev, totalCogs, totalOpex, totalExp, profit, margin }, byProduct, byMarket };
-  }, [revenue, expenses, convertToNaira, featureCogs]);
+  }, [revenue, expenses, convertToNaira, featureCogs, market]);
 
   return (
     <div className="page">

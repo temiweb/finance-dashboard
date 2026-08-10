@@ -3,7 +3,7 @@ import { Megaphone, Target, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, EmptyState, Loader, DataError } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort, PLATFORM_COLORS } from '../lib/utils';
+import { formatMoney, formatMoneyShort, getExpenseAmount, PLATFORM_COLORS } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function AdsTooltip({ active, payload }) {
@@ -32,7 +32,7 @@ export default function AdsPage() {
 
   const adData = useMemo(() => {
     const adExpenses = expenses.filter(e => e.category === 'ad_spend');
-    const totalAdSpend = adExpenses.reduce((s, e) => s + Number(e.amount), 0);
+    const totalAdSpend = adExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
     const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
@@ -43,7 +43,11 @@ export default function AdsPage() {
     const prodAdMap = {};
     const prodRevMap = {};
     const prodOrdMap = {};
-    adExpenses.forEach(e => { if (e.product) prodAdMap[e.product] = (prodAdMap[e.product] || 0) + Number(e.amount); });
+    adExpenses.forEach(expense => {
+      if (expense.product) {
+        prodAdMap[expense.product] = (prodAdMap[expense.product] || 0) + getExpenseAmount(expense, market);
+      }
+    });
     revenue.forEach(r => {
       prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
       prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (r.quantity || 1);
@@ -69,7 +73,7 @@ export default function AdsPage() {
     const campMap = {};
     adExpenses.forEach(e => {
       const key = e.campaign || 'Uncategorized';
-      campMap[key] = (campMap[key] || 0) + Number(e.amount);
+      campMap[key] = (campMap[key] || 0) + getExpenseAmount(e, market);
     });
     const byCampaign = Object.entries(campMap)
       .map(([name, spend]) => ({ name, spend }))
@@ -79,14 +83,14 @@ export default function AdsPage() {
     const platMap = {};
     adExpenses.forEach(e => {
       const key = e.platform || 'Untagged';
-      platMap[key] = (platMap[key] || 0) + Number(e.amount);
+      platMap[key] = (platMap[key] || 0) + getExpenseAmount(e, market);
     });
     const byPlatform = Object.entries(platMap)
       .map(([name, spend]) => ({ name, spend, color: PLATFORM_COLORS[name] || '#95A5A6' }))
       .sort((a, b) => b.spend - a.spend);
 
     return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign, byPlatform };
-  }, [revenue, expenses, convertToNaira]);
+  }, [revenue, expenses, convertToNaira, market]);
 
   return (
     <div className="page">

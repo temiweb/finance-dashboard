@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, ShoppingCart, Wallet, PieChart, Megaphone } fro
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell } from 'recharts';
 import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
 import { useRevenue, useExpenses, useCashFlow } from '../hooks/useData';
-import { formatMoney, formatMoneyShort, CATEGORY_COLORS, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
+import { formatMoney, formatMoneyShort, CATEGORY_COLORS, getExpenseAmount, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function DashboardTooltip({ active, payload }) {
@@ -31,7 +31,9 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
-    const totalAdSpend = expenses.filter(e => e.category === 'ad_spend').reduce((s, e) => s + Number(e.amount), 0);
+    const totalAdSpend = expenses
+      .filter(expense => expense.category === 'ad_spend')
+      .reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
 
     // Units = quantity sold; Orders = number of delivered orders (distinct order records)
@@ -43,8 +45,8 @@ export default function DashboardPage() {
     // Cost-based profit when the feature is on; otherwise the original revenue − all expenses.
     const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
     const opex = featureCogs
-      ? expenses.filter(e => e.category !== STOCK_EXPENSE_CATEGORY).reduce((s, e) => s + Number(e.amount), 0)
-      : expenses.reduce((s, e) => s + Number(e.amount), 0);
+      ? expenses.filter(expense => expense.category !== STOCK_EXPENSE_CATEGORY).reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0)
+      : expenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalExpenses = featureCogs ? (totalCogs + opex) : opex;
     const totalProfit = totalRevenue - totalExpenses;
     const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
@@ -54,7 +56,7 @@ export default function DashboardPage() {
 
     return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalUnits,
       deliveredOrders, deliveredUnits, avgUnitsPerOrder, totalCogs, costPerOrder, profitPerOrder, cashCollected };
-  }, [revenue, expenses, cashflow, convertToNaira, featureCogs]);
+  }, [revenue, expenses, cashflow, convertToNaira, featureCogs, market]);
 
   // Revenue by product chart data (converted to ₦)
   const revenueByProduct = useMemo(() => {
@@ -75,10 +77,10 @@ export default function DashboardPage() {
     const map = {};
     expenses.forEach(e => {
       const label = e.category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      map[e.category] = { name: label, value: (map[e.category]?.value || 0) + Number(e.amount), fill: CATEGORY_COLORS[e.category] || '#95A5A6' };
+      map[e.category] = { name: label, value: (map[e.category]?.value || 0) + getExpenseAmount(e, market), fill: CATEGORY_COLORS[e.category] || '#95A5A6' };
     });
     return Object.values(map);
-  }, [expenses]);
+  }, [expenses, market]);
 
   return (
     <div className="page">

@@ -65,6 +65,18 @@ export function formatMoneyShort(amount) {
   return num.toLocaleString();
 }
 
+export function getExpenseAmount(expense, market = 'all') {
+  const amount = Number(expense.amount) || 0;
+  if (market === 'all') return amount;
+  if (expense.market === 'both') {
+    const nigeriaShare = Number(expense.nigeria_share ?? 50);
+    return market === 'nigeria'
+      ? amount * nigeriaShare / 100
+      : amount * (100 - nigeriaShare) / 100;
+  }
+  return expense.market === market ? amount : 0;
+}
+
 export function formatDate(date) {
   return format(new Date(date), 'MMM dd, yyyy');
 }

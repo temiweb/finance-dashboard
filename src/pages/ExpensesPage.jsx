@@ -3,7 +3,7 @@ import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination, DataError } from '../components/SharedUI';
-import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS, AD_PLATFORMS } from '../lib/utils';
+import { formatMoney, formatDate, getExpenseAmount, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS, AD_PLATFORMS } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function ExpenseTooltip({ active, payload }) {
@@ -36,6 +36,7 @@ export default function ExpensesPage() {
     category: 'ad_spend',
     product: '',
     market: 'nigeria',
+    nigeria_share: '50',
     platform: '',
     campaign: '',
     amount: '',
@@ -43,13 +44,15 @@ export default function ExpensesPage() {
   };
   const [form, setForm] = useState(emptyForm);
 
-  const totalExpenses = data.reduce((s, e) => s + Number(e.amount), 0);
-  const adSpend = data.filter(e => e.category === 'ad_spend').reduce((s, e) => s + Number(e.amount), 0);
+  const totalExpenses = data.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
+  const adSpend = data
+    .filter(expense => expense.category === 'ad_spend')
+    .reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
 
   const categoryData = Object.entries(
     data.reduce((acc, e) => {
       const cat = EXPENSE_CATEGORIES.find(c => c.value === e.category)?.label || e.category;
-      acc[e.category] = { name: cat, value: (acc[e.category]?.value || 0) + Number(e.amount), fill: CATEGORY_COLORS[e.category] };
+      acc[e.category] = { name: cat, value: (acc[e.category]?.value || 0) + getExpenseAmount(e, market), fill: CATEGORY_COLORS[e.category] };
       return acc;
     }, {})
   ).map(([, v]) => v);
@@ -69,6 +72,7 @@ export default function ExpensesPage() {
       category: entry.category,
       product: entry.product || '',
       market: entry.market,
+      nigeria_share: String(entry.nigeria_share ?? 50),
       platform: entry.platform || '',
       campaign: entry.campaign || '',
       amount: String(entry.amount),
@@ -80,6 +84,9 @@ export default function ExpensesPage() {
   const handleSave = async () => {
     if (!form.date) return setFormError('Date is required.');
     if (!form.amount || Number(form.amount) <= 0) return setFormError('Enter a valid amount greater than zero.');
+    if (form.market === 'both' && (!form.nigeria_share || Number(form.nigeria_share) < 0 || Number(form.nigeria_share) > 100)) {
+      return setFormError('Nigeria allocation must be between 0% and 100%.');
+    }
     setFormError('');
     setSaving(true);
     try {
@@ -87,6 +94,7 @@ export default function ExpensesPage() {
         date: form.date,
         category: form.category,
         market: form.market,
+        nigeria_share: form.market === 'both' ? Number(form.nigeria_share) : 100,
         amount: Number(form.amount),
         description: form.description || null,
         product: form.product || null,
@@ -176,6 +184,7 @@ export default function ExpensesPage() {
                     <th>Platform</th>
                     <th>Product</th>
                     <th>Market</th>
+                    <th>Allocation</th>
                     <th>Amount</th>
                     <th>Description</th>
                     <th></th>
@@ -193,7 +202,8 @@ export default function ExpensesPage() {
                       <td>{e.platform || '—'}</td>
                       <td>{e.product || '—'}</td>
                       <td><span className={`market-badge ${e.market}`}>{e.market}</span></td>
-                      <td className="td-amount">{formatMoney(e.amount)}</td>
+                      <td>{e.market === 'both' ? `NG ${Number(e.nigeria_share ?? 50)}% / GH ${100 - Number(e.nigeria_share ?? 50)}%` : '—'}</td>
+                      <td className="td-amount">{formatMoney(getExpenseAmount(e, market))}</td>
                       <td className="td-desc">{e.description || '—'}</td>
                       <td className="td-actions">
                         <button className="btn-icon btn-edit" onClick={() => openEdit(e)}><Pencil size={14} /></button>
@@ -231,6 +241,13 @@ export default function ExpensesPage() {
             <span>Amount</span>
             <input type="number" min="0" placeholder="e.g. 50000" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           </label>
+          {form.market === 'both' && (
+            <label>
+              <span>Nigeria Allocation (%)</span>
+              <input type="number" min="0" max="100" step="0.01" value={form.nigeria_share} onChange={(e) => setForm({ ...form, nigeria_share: e.target.value })} />
+              <small>Ghana receives {100 - (Number(form.nigeria_share) || 0)}%</small>
+            </label>
+          )}
           <label>
             <span>Product (optional)</span>
             <select value={form.product} onChange={(e) => setForm({ ...form, product: e.target.value })}>

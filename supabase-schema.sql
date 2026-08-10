@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   )),
   product TEXT,  -- nullable for general expenses
   market TEXT CHECK (market IN ('nigeria', 'ghana', 'both')),
+  nigeria_share NUMERIC(5,2) NOT NULL DEFAULT 50 CHECK (nigeria_share >= 0 AND nigeria_share <= 100),
   platform TEXT CHECK (platform IN ('TikTok', 'Meta', 'Google', 'YouTube', 'Other')),
   campaign TEXT, -- for ad spend tracking
   amount NUMERIC(12,2) NOT NULL,
