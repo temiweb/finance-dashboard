@@ -155,6 +155,39 @@ html, body, #root {
   letter-spacing: -0.03em;
 }
 
+.page-description {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.review-intro {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.25rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid #f4a14255;
+  border-radius: 10px;
+  background: #f4a14212;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.review-intro svg { color: #F4A142; flex: 0 0 auto; }
+.review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.review-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.review-section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1rem 0.85rem; }
+.review-section h2 { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-size: 0.95rem; }
+.review-section h2 svg { color: var(--primary); }
+.review-section p { margin: 0.35rem 0 0; color: var(--text-muted); font-size: 0.78rem; line-height: 1.4; }
+.review-count { white-space: nowrap; padding: 0.25rem 0.5rem; border-radius: 999px; background: #f4a1421f; color: #c77812; font-size: 0.72rem; font-weight: 600; }
+.review-count.clear { background: #4ecdc41f; color: #238c83; }
+.review-clear { display: flex; align-items: center; gap: 0.5rem; margin: 0 1rem 1rem; padding: 0.7rem 0.75rem; border-radius: 8px; background: var(--bg-hover); color: var(--text-muted); font-size: 0.8rem; }
+.review-clear svg { color: #4ECDC4; }
+.review-table td { padding-top: 0.65rem; padding-bottom: 0.65rem; }
+.review-action { color: var(--primary); font-size: 0.76rem; }
+
 .page-filters {
   display: flex;
   gap: 0.5rem;
