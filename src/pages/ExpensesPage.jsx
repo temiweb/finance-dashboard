@@ -206,8 +206,14 @@ export default function ExpensesPage() {
                       <td className="td-amount">{formatMoney(getExpenseAmount(e, market))}</td>
                       <td className="td-desc">{e.description || '—'}</td>
                       <td className="td-actions">
-                        <button className="btn-icon btn-edit" onClick={() => openEdit(e)}><Pencil size={14} /></button>
-                        <button className="btn-icon" onClick={() => handleDelete(e.id)}><Trash2 size={14} /></button>
+                        {e.batch_id ? (
+                          <span className="td-desc">Inventory</span>
+                        ) : (
+                          <>
+                            <button className="btn-icon btn-edit" onClick={() => openEdit(e)}><Pencil size={14} /></button>
+                            <button className="btn-icon" onClick={() => handleDelete(e.id)}><Trash2 size={14} /></button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -3,7 +3,7 @@ import { PieChart as PieIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
-import { formatMoney, formatMoneyShort, getExpenseAmount, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
+import { formatMoney, formatMoneyShort, getExpenseAmount } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function ProfitabilityTooltip({ active, payload, label }) {
@@ -19,7 +19,7 @@ function ProfitabilityTooltip({ active, payload, label }) {
 }
 
 export default function ProfitabilityPage() {
-  const { convertToNaira, featureCogs } = useSettings();
+  const { convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -31,43 +31,30 @@ export default function ProfitabilityPage() {
 
   const { overall, byProduct, byMarket } = useMemo(() => {
     const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
-    const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
-
-    // When COGS is on, stock purchases are represented by COGS (cost as it sells),
-    // so the stock-purchase expense category is dropped from opex to avoid counting
-    // that cost twice. When off, everything behaves exactly as before.
-    const opexExpenses = featureCogs
-      ? expenses.filter(e => e.category !== STOCK_EXPENSE_CATEGORY)
-      : expenses;
-    const totalOpex = opexExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
-    const totalExp = featureCogs ? (totalCogs + totalOpex) : totalOpex;
+    const totalExp = expenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const profit = totalRev - totalExp;
     const margin = totalRev > 0 ? (profit / totalRev) * 100 : 0;
 
     // By product (all converted to ₦)
     const prodRevMap = {};
-    const prodCogsMap = {};
     const prodExpMap = {};
     revenue.forEach(r => {
       prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
-      prodCogsMap[r.product] = (prodCogsMap[r.product] || 0) + (r.cogs || 0);
     });
-    opexExpenses.forEach(expense => {
+    expenses.forEach(expense => {
       if (expense.product) {
         prodExpMap[expense.product] = (prodExpMap[expense.product] || 0) + getExpenseAmount(expense, market);
       }
     });
 
-    const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap), ...Object.keys(prodCogsMap)])];
+    const allProducts = [...new Set([...Object.keys(prodRevMap), ...Object.keys(prodExpMap)])];
     const byProduct = allProducts.map(p => {
       const rev = prodRevMap[p] || 0;
-      const cogs = featureCogs ? (prodCogsMap[p] || 0) : 0;
-      const exp = (prodExpMap[p] || 0) + cogs;
+      const exp = prodExpMap[p] || 0;
       return {
         name: p.length > 12 ? p.slice(0, 11) + '…' : p,
         fullName: p,
         revenue: rev,
-        cogs,
         expenses: exp,
         profit: rev - exp,
       };
@@ -75,14 +62,12 @@ export default function ProfitabilityPage() {
 
     // By market (all converted to ₦)
     const mktRevMap = {};
-    const mktCogsMap = {};
     const mktExpMap = {};
     revenue.forEach(r => {
       mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
-      mktCogsMap[r.market] = (mktCogsMap[r.market] || 0) + (r.cogs || 0);
     });
     const visibleMarkets = market === 'all' ? ['nigeria', 'ghana'] : [market];
-    opexExpenses.forEach(expense => {
+    expenses.forEach(expense => {
       visibleMarkets.forEach(currentMarket => {
         mktExpMap[currentMarket] = (mktExpMap[currentMarket] || 0) + getExpenseAmount(expense, currentMarket);
       });
@@ -90,12 +75,12 @@ export default function ProfitabilityPage() {
 
     const byMarket = visibleMarkets.map(m => {
       const rev = mktRevMap[m] || 0;
-      const exp = (mktExpMap[m] || 0) + (featureCogs ? (mktCogsMap[m] || 0) : 0);
+      const exp = mktExpMap[m] || 0;
       return { name: m.charAt(0).toUpperCase() + m.slice(1), revenue: rev, expenses: exp, profit: rev - exp };
     });
 
-    return { overall: { totalRev, totalCogs, totalOpex, totalExp, profit, margin }, byProduct, byMarket };
-  }, [revenue, expenses, convertToNaira, featureCogs, market]);
+    return { overall: { totalRev, totalExp, profit, margin }, byProduct, byMarket };
+  }, [revenue, expenses, convertToNaira, market]);
 
   return (
     <div className="page">
@@ -110,21 +95,11 @@ export default function ProfitabilityPage() {
 
       {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); }} /> : (
         <>
-          {featureCogs && (
-            <div className="form-preview" style={{ marginBottom: '1rem' }}>
-              Cost-based profit is <strong>on</strong>: profit = revenue − cost of goods sold (COGS) − running costs.
-              Stock purchases logged under “Import / Shipping” are excluded from running costs (they’re counted as COGS as units sell).
-            </div>
-          )}
-          <div className={featureCogs ? 'kpi-grid kpi-grid-4' : 'kpi-grid kpi-grid-3'}>
+          <div className="kpi-grid kpi-grid-3">
             <KpiCard title="Revenue" value={formatMoney(overall.totalRev)} icon={TrendingUp} color="#4ECDC4" />
-            {featureCogs && (
-              <KpiCard title="COGS" value={formatMoney(overall.totalCogs)} subtitle="Cost of goods sold" icon={TrendingDown} color="#F4A142" />
-            )}
             <KpiCard
-              title={featureCogs ? 'Running Costs' : 'Total Costs'}
-              value={formatMoney(featureCogs ? overall.totalOpex : overall.totalExp)}
-              subtitle={featureCogs ? 'Ads, delivery, opex' : undefined}
+              title="Total Costs"
+              value={formatMoney(overall.totalExp)}
               icon={TrendingDown}
               color="#E8594F"
             />

@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, TrendingUp, Receipt,
-  PieChart, Megaphone, Wallet, LogOut, Menu, X, Settings
+  PieChart, Megaphone, Wallet, Package, LogOut, Menu, X, Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/useAuth';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { id: 'profitability', label: 'Profitability', icon: PieChart },
   { id: 'ads', label: 'Ad Performance', icon: Megaphone },
   { id: 'cashflow', label: 'Cash Flow', icon: Wallet },
+  { id: 'inventory', label: 'Inventory Costs', icon: Package },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 

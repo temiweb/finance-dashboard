@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   platform TEXT CHECK (platform IN ('TikTok', 'Meta', 'Google', 'YouTube', 'Other')),
   campaign TEXT, -- for ad spend tracking
   amount NUMERIC(12,2) NOT NULL,
+  batch_id UUID,
+  batch_name TEXT,
+  supplier TEXT,
+  units_received INTEGER CHECK (units_received IS NULL OR units_received > 0),
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

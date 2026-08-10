@@ -18,7 +18,7 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
 
         let crmQuery = supabase
           .from('orders')
-          .select('id, product, qty, price, country, status, actual_price_collected, actual_qty_delivered, delivery_fee, unit_cost, created_at')
+          .select('id, product, qty, price, country, status, actual_price_collected, actual_qty_delivered, delivery_fee, created_at')
           .eq('status', 'delivered')
           .gte('created_at', `${from}T00:00:00`)
           .lte('created_at', `${to}T23:59:59`)
@@ -45,7 +45,6 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
           const deliveredQty = Number(order.actual_qty_delivered) || Number(order.qty) || 1;
           const collected = Number(order.actual_price_collected) || (Number(order.price) * deliveredQty);
           const deliveryFee = Number(order.delivery_fee) || 0;
-          const unitCost = order.unit_cost != null ? Number(order.unit_cost) : null;
           return {
             id: order.id,
             date: order.created_at?.split('T')[0],
@@ -57,8 +56,6 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
             delivery_fee: deliveryFee,
             delivered_qty: deliveredQty,
             delivered_orders: 1,
-            unit_cost: unitCost,
-            cogs: unitCost != null ? unitCost * deliveredQty : 0,
             is_order: true,
             source: 'crm',
             status: order.status,
@@ -166,6 +163,46 @@ export function useCashFlow(period = 'month', market = 'all', customRange = null
   return { data, loading, error, refetch };
 }
 
+export function useInventoryBatchExpenses() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchBatches() {
+      setLoading(true);
+      try {
+        const { data: rows, error: queryError } = await supabase
+          .from('finance_expenses')
+          .select('*')
+          .not('batch_id', 'is', null)
+          .order('date', { ascending: false });
+        if (queryError) throw queryError;
+        if (!ignore) {
+          setData(rows || []);
+          setError(null);
+        }
+      } catch (fetchError) {
+        if (!ignore) {
+          setData([]);
+          setError(fetchError.message);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    }
+
+    fetchBatches();
+    return () => { ignore = true; };
+  }, [tick]);
+
+  const refetch = useCallback(() => setTick(current => current + 1), []);
+  return { data, loading, error, refetch };
+}
+
 export async function addRevenue(entry) {
   const { data, error } = await supabase.from('finance_revenue').insert([entry]).select().single();
   if (error) throw error;
@@ -182,6 +219,42 @@ export async function addCashFlow(entry) {
   const { data, error } = await supabase.from('finance_cash_flow').insert([entry]).select().single();
   if (error) throw error;
   return data;
+}
+
+export async function addInventoryBatch(batch) {
+  const batchId = crypto.randomUUID();
+  const sharedFields = {
+    date: batch.date,
+    product: batch.product,
+    market: batch.market,
+    nigeria_share: batch.market === 'both' ? batch.nigeriaShare : 100,
+    batch_id: batchId,
+    batch_name: batch.batchName,
+    supplier: batch.supplier || null,
+    units_received: batch.unitsReceived,
+  };
+  const expenseRows = [
+    { category: 'stock_purchase', amount: batch.stockCost, description: 'Inventory purchase' },
+    { category: 'import_shipping', amount: batch.shippingCost, description: 'Freight, duty, and clearing' },
+    { category: 'other', amount: batch.otherCost, description: 'Other batch costs' },
+  ]
+    .filter(row => row.amount > 0)
+    .map(row => ({ ...sharedFields, ...row }));
+
+  const { data, error } = await supabase
+    .from('finance_expenses')
+    .insert(expenseRows)
+    .select();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteInventoryBatch(batchId) {
+  const { error } = await supabase
+    .from('finance_expenses')
+    .delete()
+    .eq('batch_id', batchId);
+  if (error) throw error;
 }
 
 export async function deleteRecord(table, id) {

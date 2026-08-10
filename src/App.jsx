@@ -10,6 +10,7 @@ import ExpensesPage from './pages/ExpensesPage';
 import ProfitabilityPage from './pages/ProfitabilityPage';
 import AdsPage from './pages/AdsPage';
 import CashFlowPage from './pages/CashFlowPage';
+import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import { Loader } from './components/SharedUI';
 import './index.css';
@@ -28,6 +29,7 @@ function AppContent() {
     profitability: ProfitabilityPage,
     ads: AdsPage,
     cashflow: CashFlowPage,
+    inventory: InventoryPage,
     settings: SettingsPage,
   };
 

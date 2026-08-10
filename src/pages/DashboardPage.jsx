@@ -3,7 +3,7 @@ import { DollarSign, TrendingUp, ShoppingCart, Wallet, PieChart, Megaphone } fro
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell } from 'recharts';
 import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
 import { useRevenue, useExpenses, useCashFlow } from '../hooks/useData';
-import { formatMoney, formatMoneyShort, CATEGORY_COLORS, getExpenseAmount, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
+import { formatMoney, formatMoneyShort, CATEGORY_COLORS, getExpenseAmount } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 function DashboardTooltip({ active, payload }) {
@@ -17,7 +17,7 @@ function DashboardTooltip({ active, payload }) {
 }
 
 export default function DashboardPage() {
-  const { productColors: PRODUCT_COLORS, convertToNaira, featureCogs } = useSettings();
+  const { productColors: PRODUCT_COLORS, convertToNaira } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -44,20 +44,14 @@ export default function DashboardPage() {
     const avgUnitsPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? deliveredUnits / deliveredOrders : 0;
 
     // Cost-based profit when the feature is on; otherwise the original revenue − all expenses.
-    const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
-    const opex = featureCogs
-      ? expenses.filter(expense => expense.category !== STOCK_EXPENSE_CATEGORY).reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0)
-      : expenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
-    const totalExpenses = featureCogs ? (totalCogs + opex) : opex;
+    const totalExpenses = expenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalProfit = totalRevenue - totalExpenses;
     const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
-    const costPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? totalCogs / deliveredOrders : 0;
-    const profitPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? totalProfit / deliveredOrders : 0;
 
     return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalUnits,
-      deliveredOrders, deliveredUnits, avgUnitsPerOrder, hasUnknownDeliveredOrders, totalCogs, costPerOrder, profitPerOrder, cashCollected };
-  }, [revenue, expenses, cashflow, convertToNaira, featureCogs, market]);
+      deliveredOrders, deliveredUnits, avgUnitsPerOrder, hasUnknownDeliveredOrders, cashCollected };
+  }, [revenue, expenses, cashflow, convertToNaira, market]);
 
   // Revenue by product chart data (converted to ₦)
   const revenueByProduct = useMemo(() => {
@@ -99,9 +93,9 @@ export default function DashboardPage() {
           <div className="kpi-grid">
             <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.totalUnits.toLocaleString()} units sold`} icon={TrendingUp} color="#4ECDC4" />
             <KpiCard
-              title={featureCogs ? 'Costs (COGS + opex)' : 'Expenses'}
+              title="Expenses"
               value={formatMoney(stats.totalExpenses)}
-              subtitle={featureCogs ? `COGS: ${formatMoney(stats.totalCogs)}` : `Ad spend: ${formatMoney(stats.totalAdSpend)}`}
+              subtitle={`Ad spend: ${formatMoney(stats.totalAdSpend)}`}
               icon={DollarSign}
               color="#E8594F"
             />
@@ -116,15 +110,6 @@ export default function DashboardPage() {
               icon={ShoppingCart}
               color="#45B7D1"
             />
-            {featureCogs && (
-              <KpiCard
-                title="Profit / Delivered Order"
-                value={stats.hasUnknownDeliveredOrders ? '—' : formatMoney(stats.profitPerOrder)}
-                subtitle={stats.hasUnknownDeliveredOrders ? 'Add delivered orders to manual entries' : `Cost/order: ${formatMoney(stats.costPerOrder)}`}
-                icon={PieChart}
-                color={stats.profitPerOrder >= 0 ? '#4ECDC4' : '#E8594F'}
-              />
-            )}
           </div>
 
           <div className="charts-grid">
