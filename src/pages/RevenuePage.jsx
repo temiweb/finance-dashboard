@@ -25,6 +25,7 @@ export default function RevenuePage() {
     product: PRODUCTS[0],
     market: 'nigeria',
     quantity: '',
+    delivered_orders: '',
     unit_price: '',
     total_amount: '',
     exchange_rate: String(exchangeRate),
@@ -34,7 +35,9 @@ export default function RevenuePage() {
 
  // Always calculate in naira (converted for Ghana)
   const totalRevenueNaira = data.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
-  const totalOrders = data.reduce((s, r) => s + (r.quantity || 1), 0);
+  const totalUnits = data.reduce((sum, revenue) => sum + (revenue.quantity || 1), 0);
+  const deliveredOrders = data.reduce((sum, revenue) => sum + (Number(revenue.delivered_orders) || 0), 0);
+  const hasUnknownDeliveredOrders = data.some(revenue => revenue.source === 'manual' && !Number(revenue.delivered_orders));
 
   // Original cedis total (only meaningful when Ghana filter is active)
   const totalCedis = market === 'ghana'
@@ -50,6 +53,9 @@ export default function RevenuePage() {
   const handleSave = async () => {
     if (!form.date) return setFormError('Date is required.');
     if (computedTotal <= 0) return setFormError('Enter a valid amount greater than zero.');
+    if (!editingId && form.market === 'ghana' && (!form.delivered_orders || Number(form.delivered_orders) <= 0)) {
+      return setFormError('Enter the number of delivered COD orders.');
+    }
     if (form.market === 'ghana' && (!form.exchange_rate || Number(form.exchange_rate) <= 0)) {
       return setFormError('Enter a valid Ghana-to-naira exchange rate.');
     }
@@ -61,6 +67,7 @@ export default function RevenuePage() {
         product: form.product,
         market: form.market,
         quantity: Number(form.quantity) || 1,
+        delivered_orders: form.delivered_orders ? Number(form.delivered_orders) : null,
         unit_price: Number(form.unit_price) || computedTotal,
         total_amount: computedTotal,
         exchange_rate: form.market === 'ghana' ? Number(form.exchange_rate) : null,
@@ -98,6 +105,7 @@ export default function RevenuePage() {
       product: entry.product,
       market: entry.market,
       quantity: String(entry.quantity || ''),
+      delivered_orders: String(entry.delivered_orders || ''),
       unit_price: String(entry.unit_price || ''),
       total_amount: String(entry.total_amount || ''),
       exchange_rate: String(entry.exchange_rate ?? exchangeRate),
@@ -136,14 +144,18 @@ export default function RevenuePage() {
             <KpiCard
               title="Total Revenue"
               value={formatMoney(totalRevenueNaira)}
-              subtitle={market === 'ghana' ? `GH₵${totalCedis.toLocaleString()} · ${totalOrders} units` : `${totalOrders} units sold`}
+              subtitle={market === 'ghana'
+                ? `GH₵${totalCedis.toLocaleString()} · ${totalUnits} units`
+                : `${totalUnits} units sold`}
               icon={TrendingUp}
               color="#4ECDC4"
               />
             <KpiCard
-              title="Avg Order Value"
-              value={totalOrders > 0 ? formatMoney(totalRevenueNaira / totalOrders) : '—'}
-              subtitle={`${totalOrders} units across ${data.length} entries`}
+              title="Avg Delivered Order Value"
+              value={!hasUnknownDeliveredOrders && deliveredOrders > 0 ? formatMoney(totalRevenueNaira / deliveredOrders) : '—'}
+              subtitle={hasUnknownDeliveredOrders
+                ? 'Add delivered orders to manual entries'
+                : `${deliveredOrders} delivered orders`}
               color="#7B68EE"
               />
           </div>
@@ -159,6 +171,7 @@ export default function RevenuePage() {
                     <th>Product</th>
                     <th>Market</th>
                     <th>Qty</th>
+                    <th>Delivered Orders</th>
                     <th>Unit Price</th>
                     <th>Total</th>
                     <th>Source</th>
@@ -173,6 +186,7 @@ export default function RevenuePage() {
                       <td className="td-product">{r.product}</td>
                       <td><span className={`market-badge ${r.market}`}>{r.market}</span></td>
                       <td>{r.quantity}</td>
+                      <td>{r.delivered_orders || '—'}</td>
                       <td>{formatMoney(r.unit_price, r.market)}</td>
                       <td className="td-amount">{formatMoney(r.total_amount, r.market)}</td>
                       <td><span className={`source-badge ${r.source}`}>{r.source}</span></td>
@@ -221,6 +235,12 @@ export default function RevenuePage() {
             <span>Qty Sold (optional)</span>
             <input type="number" min="1" placeholder="e.g. 15" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
           </label>
+          {form.market === 'ghana' && (
+            <label>
+              <span>Delivered COD Orders</span>
+              <input type="number" min="1" placeholder="e.g. 12" value={form.delivered_orders} onChange={(e) => setForm({ ...form, delivered_orders: e.target.value })} />
+            </label>
+          )}
           <label>
             <span>Unit Price (optional)</span>
             <input type="number" min="0" placeholder="Auto if total + qty given" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />

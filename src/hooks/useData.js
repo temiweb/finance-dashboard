@@ -42,20 +42,21 @@ export function useRevenue(period = 'month', market = 'all', customRange = null)
         if (manualResult.error) throw manualResult.error;
 
         const crmRows = (crmResult.data || []).map(order => {
-          const collected = Number(order.actual_price_collected) || (Number(order.price) * (order.qty || 1));
-          const deliveryFee = Number(order.delivery_fee) || 0;
           const deliveredQty = Number(order.actual_qty_delivered) || Number(order.qty) || 1;
+          const collected = Number(order.actual_price_collected) || (Number(order.price) * deliveredQty);
+          const deliveryFee = Number(order.delivery_fee) || 0;
           const unitCost = order.unit_cost != null ? Number(order.unit_cost) : null;
           return {
             id: order.id,
             date: order.created_at?.split('T')[0],
             product: order.product || 'Unknown',
             market: order.country || 'nigeria',
-            quantity: order.qty || 1,
+            quantity: deliveredQty,
             unit_price: Number(order.price) || 0,
             total_amount: collected - deliveryFee,
             delivery_fee: deliveryFee,
             delivered_qty: deliveredQty,
+            delivered_orders: 1,
             unit_cost: unitCost,
             cogs: unitCost != null ? unitCost * deliveredQty : 0,
             is_order: true,

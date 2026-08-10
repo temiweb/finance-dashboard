@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS finance_revenue (
   product TEXT NOT NULL,
   market TEXT NOT NULL CHECK (market IN ('nigeria', 'ghana')),
   quantity INTEGER NOT NULL DEFAULT 1,
+  delivered_orders INTEGER CHECK (delivered_orders IS NULL OR delivered_orders > 0),
   unit_price NUMERIC(12,2) NOT NULL,
   total_amount NUMERIC(12,2) NOT NULL,
   exchange_rate NUMERIC(12,4) CHECK (exchange_rate IS NULL OR exchange_rate > 0),

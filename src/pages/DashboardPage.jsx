@@ -36,11 +36,12 @@ export default function DashboardPage() {
       .reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const cashCollected = cashflow.reduce((s, c) => s + Number(c.amount || 0), 0);
 
-    // Units = quantity sold; Orders = number of delivered orders (distinct order records)
+    // Units are sold quantities; delivered order counts come from CRM or manual Ghana entries.
     const totalUnits = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
-    const deliveredOrders = revenue.filter(r => r.is_order).length;
-    const deliveredUnits = revenue.filter(r => r.is_order).reduce((s, r) => s + (r.delivered_qty || r.quantity || 1), 0);
-    const avgUnitsPerOrder = deliveredOrders > 0 ? deliveredUnits / deliveredOrders : 0;
+    const deliveredOrders = revenue.reduce((sum, item) => sum + (Number(item.delivered_orders) || 0), 0);
+    const hasUnknownDeliveredOrders = revenue.some(item => item.source === 'manual' && !Number(item.delivered_orders));
+    const deliveredUnits = totalUnits;
+    const avgUnitsPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? deliveredUnits / deliveredOrders : 0;
 
     // Cost-based profit when the feature is on; otherwise the original revenue − all expenses.
     const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
@@ -51,11 +52,11 @@ export default function DashboardPage() {
     const totalProfit = totalRevenue - totalExpenses;
     const margin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
-    const costPerOrder = deliveredOrders > 0 ? totalCogs / deliveredOrders : 0;
-    const profitPerOrder = deliveredOrders > 0 ? totalProfit / deliveredOrders : 0;
+    const costPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? totalCogs / deliveredOrders : 0;
+    const profitPerOrder = !hasUnknownDeliveredOrders && deliveredOrders > 0 ? totalProfit / deliveredOrders : 0;
 
     return { totalRevenue, totalExpenses, totalAdSpend, totalProfit, margin, roas, totalUnits,
-      deliveredOrders, deliveredUnits, avgUnitsPerOrder, totalCogs, costPerOrder, profitPerOrder, cashCollected };
+      deliveredOrders, deliveredUnits, avgUnitsPerOrder, hasUnknownDeliveredOrders, totalCogs, costPerOrder, profitPerOrder, cashCollected };
   }, [revenue, expenses, cashflow, convertToNaira, featureCogs, market]);
 
   // Revenue by product chart data (converted to ₦)
@@ -96,7 +97,7 @@ export default function DashboardPage() {
       {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); refetchCashFlow(); }} /> : (
         <>
           <div className="kpi-grid">
-            <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.deliveredOrders.toLocaleString()} orders`} icon={TrendingUp} color="#4ECDC4" />
+            <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.totalUnits.toLocaleString()} units sold`} icon={TrendingUp} color="#4ECDC4" />
             <KpiCard
               title={featureCogs ? 'Costs (COGS + opex)' : 'Expenses'}
               value={formatMoney(stats.totalExpenses)}
@@ -108,9 +109,21 @@ export default function DashboardPage() {
             <KpiCard title="ROAS" value={stats.roas > 0 ? `${stats.roas.toFixed(1)}x` : '—'} subtitle="Return on ad spend" icon={Megaphone} color="#F4A142" />
             <KpiCard title="Cash Received" value={formatMoney(stats.cashCollected)} subtitle="From agents & exchangers" icon={Wallet} color="#7B68EE" />
             <KpiCard title="Units" value={stats.totalUnits.toLocaleString()} subtitle={`${stats.deliveredUnits.toLocaleString()} delivered`} icon={ShoppingCart} color="#26A69A" />
-            <KpiCard title="Orders" value={stats.deliveredOrders.toLocaleString()} subtitle={`${stats.avgUnitsPerOrder.toFixed(1)} units/order`} icon={ShoppingCart} color="#45B7D1" />
+            <KpiCard
+              title="Delivered Orders"
+              value={stats.deliveredOrders.toLocaleString()}
+              subtitle={stats.hasUnknownDeliveredOrders ? 'Add delivered orders to manual entries' : `${stats.avgUnitsPerOrder.toFixed(1)} units/order`}
+              icon={ShoppingCart}
+              color="#45B7D1"
+            />
             {featureCogs && (
-              <KpiCard title="Profit / Order" value={formatMoney(stats.profitPerOrder)} subtitle={`Cost/order: ${formatMoney(stats.costPerOrder)}`} icon={PieChart} color={stats.profitPerOrder >= 0 ? '#4ECDC4' : '#E8594F'} />
+              <KpiCard
+                title="Profit / Delivered Order"
+                value={stats.hasUnknownDeliveredOrders ? '—' : formatMoney(stats.profitPerOrder)}
+                subtitle={stats.hasUnknownDeliveredOrders ? 'Add delivered orders to manual entries' : `Cost/order: ${formatMoney(stats.costPerOrder)}`}
+                icon={PieChart}
+                color={stats.profitPerOrder >= 0 ? '#4ECDC4' : '#E8594F'}
+              />
             )}
           </div>
 

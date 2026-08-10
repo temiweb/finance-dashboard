@@ -34,15 +34,17 @@ export default function AdsPage() {
     const adExpenses = expenses.filter(e => e.category === 'ad_spend');
     const totalAdSpend = adExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
-    const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
+    const totalDeliveredOrders = revenue.reduce((sum, item) => sum + (Number(item.delivered_orders) || 0), 0);
+    const hasUnknownDeliveredOrders = revenue.some(item => item.source === 'manual' && !Number(item.delivered_orders));
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
-    const costPerPurchase = totalOrders > 0 ? totalAdSpend / totalOrders : 0;
-    const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const costPerDeliveredOrder = !hasUnknownDeliveredOrders && totalDeliveredOrders > 0 ? totalAdSpend / totalDeliveredOrders : 0;
+    const aov = !hasUnknownDeliveredOrders && totalDeliveredOrders > 0 ? totalRevenue / totalDeliveredOrders : 0;
 
     // By product
     const prodAdMap = {};
     const prodRevMap = {};
     const prodOrdMap = {};
+    const productHasUnknownDeliveredOrders = {};
     adExpenses.forEach(expense => {
       if (expense.product) {
         prodAdMap[expense.product] = (prodAdMap[expense.product] || 0) + getExpenseAmount(expense, market);
@@ -50,7 +52,8 @@ export default function AdsPage() {
     });
     revenue.forEach(r => {
       prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
-      prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (r.quantity || 1);
+      prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (Number(r.delivered_orders) || 0);
+      if (r.source === 'manual' && !Number(r.delivered_orders)) productHasUnknownDeliveredOrders[r.product] = true;
     });
 
     const allProducts = [...new Set([...Object.keys(prodAdMap), ...Object.keys(prodRevMap)])];
@@ -64,8 +67,9 @@ export default function AdsPage() {
         adSpend: spend,
         revenue: rev,
         roas: spend > 0 ? rev / spend : 0,
-        cpp: orders > 0 ? spend / orders : 0,
+        cpp: !productHasUnknownDeliveredOrders[p] && orders > 0 ? spend / orders : 0,
         orders,
+        hasUnknownDeliveredOrders: !!productHasUnknownDeliveredOrders[p],
       };
     });
 
@@ -89,7 +93,7 @@ export default function AdsPage() {
       .map(([name, spend]) => ({ name, spend, color: PLATFORM_COLORS[name] || '#95A5A6' }))
       .sort((a, b) => b.spend - a.spend);
 
-    return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign, byPlatform };
+    return { totalAdSpend, totalRevenue, totalDeliveredOrders, hasUnknownDeliveredOrders, roas, costPerDeliveredOrder, aov, byProduct, byCampaign, byPlatform };
   }, [revenue, expenses, convertToNaira, market]);
 
   return (
@@ -107,7 +111,13 @@ export default function AdsPage() {
         <>
           <div className="kpi-grid kpi-grid-3">
             <KpiCard title="ROAS" value={adData.roas > 0 ? `${adData.roas.toFixed(1)}x` : '—'} subtitle={`Ad spend: ${formatMoney(adData.totalAdSpend)}`} icon={Megaphone} color="#F4A142" />
-            <KpiCard title="Cost / Purchase" value={adData.costPerPurchase > 0 ? formatMoney(adData.costPerPurchase) : '—'} subtitle={`${adData.totalOrders} orders`} icon={Target} color="#E8594F" />
+            <KpiCard
+              title="Cost / Delivered Order"
+              value={!adData.hasUnknownDeliveredOrders && adData.costPerDeliveredOrder > 0 ? formatMoney(adData.costPerDeliveredOrder) : '—'}
+              subtitle={adData.hasUnknownDeliveredOrders ? 'Add delivered orders to manual entries' : `${adData.totalDeliveredOrders} delivered orders`}
+              icon={Target}
+              color="#E8594F"
+            />
             <KpiCard title="Revenue from Ads" value={formatMoney(adData.totalRevenue)} subtitle={`AOV: ${adData.aov > 0 ? formatMoney(adData.aov) : '—'}`} icon={TrendingUp} color="#4ECDC4" />
           </div>
 
@@ -180,7 +190,7 @@ export default function AdsPage() {
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Orders</th><th>ROAS</th><th>Cost/Purchase</th></tr>
+                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Delivered Orders</th><th>ROAS</th><th>Cost / Delivered Order</th></tr>
                   </thead>
                   <tbody>
                     {adData.byProduct.map((p, i) => (
@@ -190,7 +200,7 @@ export default function AdsPage() {
                         <td>{formatMoney(p.revenue)}</td>
                         <td>{p.orders}</td>
                         <td className={p.roas >= 2 ? 'positive' : p.roas >= 1 ? '' : 'negative'}>{p.roas > 0 ? `${p.roas.toFixed(1)}x` : '—'}</td>
-                        <td>{p.cpp > 0 ? formatMoney(p.cpp) : '—'}</td>
+                        <td>{p.hasUnknownDeliveredOrders ? '—' : p.cpp > 0 ? formatMoney(p.cpp) : '—'}</td>
                       </tr>
                     ))}
                   </tbody>
