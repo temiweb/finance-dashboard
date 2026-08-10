@@ -2,9 +2,19 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, Pencil, Receipt } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useExpenses, addExpense, deleteRecord, updateRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination, DataError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, EXPENSE_CATEGORIES, CATEGORY_COLORS, AD_PLATFORMS } from '../lib/utils';
-import { useSettings } from '../lib/settings';
+import { useSettings } from '../lib/useSettings';
+
+function ExpenseTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{payload[0].name}</p>
+      <p className="chart-tooltip-value">{formatMoney(payload[0].value)}</p>
+    </div>
+  );
+}
 
 export default function ExpensesPage() {
   const { products: PRODUCTS } = useSettings();
@@ -17,7 +27,7 @@ export default function ExpensesPage() {
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const { data, loading, refetch } = useExpenses(period, market, customRange);
+  const { data, loading, error, refetch } = useExpenses(period, market, customRange);
   useEffect(() => { setPage(1); }, [period, market, customRange]);
   const paginatedData = data.slice((page - 1) * pageSize, page * pageSize);
 
@@ -109,16 +119,6 @@ export default function ExpensesPage() {
     }
   };
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="chart-tooltip">
-        <p className="chart-tooltip-label">{payload[0].name}</p>
-        <p className="chart-tooltip-value">{formatMoney(payload[0].value)}</p>
-      </div>
-    );
-  };
-
   return (
     <div className="page">
       <div className="page-header">
@@ -133,7 +133,7 @@ export default function ExpensesPage() {
       </div>
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={refetch} /> : (
         <>
           <div className="kpi-grid kpi-grid-2">
             <KpiCard title="Total Expenses" value={formatMoney(totalExpenses)} subtitle={`${data.length} entries`} icon={Receipt} color="#E8594F" />
@@ -149,7 +149,7 @@ export default function ExpensesPage() {
                     <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={85} paddingAngle={3}>
                       {categoryData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ExpenseTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="chart-legend">

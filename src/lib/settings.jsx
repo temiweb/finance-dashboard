@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
 import { PRODUCTS as DEFAULT_PRODUCTS } from './utils';
-
-const SettingsContext = createContext(null);
+import { SettingsContext } from './settings-context';
 
 // Color palette for auto-assigning to products
 const COLOR_PALETTE = [
@@ -142,10 +141,4 @@ export function SettingsProvider({ children }) {
       {children}
     </SettingsContext.Provider>
   );
-}
-
-export function useSettings() {
-  const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
-  return ctx;
 }

@@ -2,9 +2,21 @@ import { useState, useMemo } from 'react';
 import { PieChart as PieIcon, TrendingUp, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
 import { formatMoney, formatMoneyShort, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
-import { useSettings } from '../lib/settings';
+import { useSettings } from '../lib/useSettings';
+
+function ProfitabilityTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{payload[0]?.payload?.fullName || label}</p>
+      {payload.map((item) => (
+        <p key={item.dataKey} style={{ color: item.color }}>{item.name}: {formatMoney(item.value)}</p>
+      ))}
+    </div>
+  );
+}
 
 export default function ProfitabilityPage() {
   const { convertToNaira, featureCogs } = useSettings();
@@ -12,9 +24,10 @@ export default function ProfitabilityPage() {
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
-  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
+  const { data: revenue, loading: rl, error: revenueError, refetch: refetchRevenue } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el, error: expensesError, refetch: refetchExpenses } = useExpenses(period, market, customRange);
   const loading = rl || el;
+  const error = revenueError || expensesError;
 
   const { overall, byProduct, byMarket } = useMemo(() => {
     const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
@@ -82,18 +95,6 @@ export default function ProfitabilityPage() {
     return { overall: { totalRev, totalCogs, totalOpex, totalExp, profit, margin }, byProduct, byMarket };
   }, [revenue, expenses, convertToNaira, featureCogs]);
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="chart-tooltip">
-        <p className="chart-tooltip-label">{payload[0]?.payload?.fullName || label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.color }}>{p.name}: {formatMoney(p.value)}</p>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="page">
       <div className="page-header">
@@ -105,7 +106,7 @@ export default function ProfitabilityPage() {
       </div>
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); }} /> : (
         <>
           {featureCogs && (
             <div className="form-preview" style={{ marginBottom: '1rem' }}>
@@ -142,7 +143,7 @@ export default function ProfitabilityPage() {
                   <BarChart data={byProduct} margin={{ top: 10, right: 10, bottom: 30, left: 10 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={formatMoneyShort} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ProfitabilityTooltip />} />
                     <Legend />
                     <Bar dataKey="revenue" name="Revenue" fill="#4ECDC4" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name="Expenses" fill="#E8594F" radius={[4, 4, 0, 0]} />
@@ -160,7 +161,7 @@ export default function ProfitabilityPage() {
                   <BarChart data={byMarket} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={formatMoneyShort} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<ProfitabilityTooltip />} />
                     <Legend />
                     <Bar dataKey="revenue" name="Revenue" fill="#4ECDC4" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name="Expenses" fill="#E8594F" radius={[4, 4, 0, 0]} />

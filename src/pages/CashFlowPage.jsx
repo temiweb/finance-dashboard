@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Plus, Trash2, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useCashFlow, addCashFlow, deleteRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination, DataError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, formatMoneyShort } from '../lib/utils';
 
 export default function CashFlowPage() {
@@ -15,7 +15,7 @@ export default function CashFlowPage() {
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const { data, loading, refetch } = useCashFlow(period, market, customRange);
+  const { data, loading, error, refetch } = useCashFlow(period, market, customRange);
   useEffect(() => { setPage(1); }, [period, market, customRange]);
   const paginatedData = data.slice((page - 1) * pageSize, page * pageSize);
 
@@ -103,7 +103,7 @@ export default function CashFlowPage() {
       </div>
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={refetch} /> : (
         <>
           <div className="kpi-grid kpi-grid-3">
             <KpiCard title="Total Received" value={formatMoney(stats.totalCollected)} subtitle={`${stats.entries} payments`} icon={Wallet} color="#4ECDC4" />

@@ -3,7 +3,7 @@ import {
   PieChart, Megaphone, Wallet, LogOut, Menu, X, Settings
 } from 'lucide-react';
 import { useState } from 'react';
-import { useAuth } from '../lib/auth';
+import { useAuth } from '../lib/useAuth';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
@@ -34,16 +34,19 @@ export default function Sidebar({ activePage, onNavigate }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={`nav-item ${activePage === id ? 'active' : ''}`}
-              onClick={() => { onNavigate(id); setCollapsed(false); }}
-            >
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const NavIcon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={`nav-item ${activePage === item.id ? 'active' : ''}`}
+                onClick={() => { onNavigate(item.id); setCollapsed(false); }}
+              >
+                <NavIcon size={18} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">

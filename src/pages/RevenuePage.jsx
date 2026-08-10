@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Pencil, TrendingUp } from 'lucide-react';
 import { useRevenue, addRevenue, deleteRecord, updateRecord } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination, DataError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS } from '../lib/utils';
-import { useSettings } from '../lib/settings';
+import { useSettings } from '../lib/useSettings';
 
 export default function RevenuePage() {
   const { products: PRODUCTS, convertToNaira } = useSettings();
@@ -16,7 +16,7 @@ export default function RevenuePage() {
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
-  const { data, loading, refetch } = useRevenue(period, market, customRange);
+  const { data, loading, error, refetch } = useRevenue(period, market, customRange);
   useEffect(() => { setPage(1); }, [period, market, customRange]);
   const paginatedData = data.slice((page - 1) * pageSize, page * pageSize);
 
@@ -124,7 +124,7 @@ export default function RevenuePage() {
       </div>
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={refetch} /> : (
         <>
           <div className="kpi-grid kpi-grid-2">
             <KpiCard

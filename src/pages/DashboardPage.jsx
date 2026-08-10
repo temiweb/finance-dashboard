@@ -1,10 +1,20 @@
 import { useState, useMemo } from 'react';
 import { DollarSign, TrendingUp, ShoppingCart, Wallet, PieChart, Megaphone } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell } from 'recharts';
-import { KpiCard, PeriodSelector, MarketFilter, Loader } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, Loader, DataError } from '../components/SharedUI';
 import { useRevenue, useExpenses, useCashFlow } from '../hooks/useData';
 import { formatMoney, formatMoneyShort, CATEGORY_COLORS, STOCK_EXPENSE_CATEGORY } from '../lib/utils';
-import { useSettings } from '../lib/settings';
+import { useSettings } from '../lib/useSettings';
+
+function DashboardTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{payload[0].payload.fullName || payload[0].payload.name}</p>
+      <p className="chart-tooltip-value">{formatMoney(payload[0].value)}</p>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { productColors: PRODUCT_COLORS, convertToNaira, featureCogs } = useSettings();
@@ -12,11 +22,12 @@ export default function DashboardPage() {
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
-  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
-  const { data: cashflow, loading: cl } = useCashFlow(period, market, customRange);
+  const { data: revenue, loading: rl, error: revenueError, refetch: refetchRevenue } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el, error: expensesError, refetch: refetchExpenses } = useExpenses(period, market, customRange);
+  const { data: cashflow, loading: cl, error: cashFlowError, refetch: refetchCashFlow } = useCashFlow(period, market, customRange);
 
   const loading = rl || el || cl;
+  const error = revenueError || expensesError || cashFlowError;
 
   const stats = useMemo(() => {
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
@@ -57,7 +68,7 @@ export default function DashboardPage() {
       value,
       fill: PRODUCT_COLORS[name] || '#7B68EE',
     }));
-  }, [revenue, convertToNaira]);
+  }, [revenue, convertToNaira, PRODUCT_COLORS]);
 
   // Expenses by category chart data
   const expensesByCategory = useMemo(() => {
@@ -68,16 +79,6 @@ export default function DashboardPage() {
     });
     return Object.values(map);
   }, [expenses]);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="chart-tooltip">
-        <p className="chart-tooltip-label">{payload[0].payload.fullName || payload[0].payload.name}</p>
-        <p className="chart-tooltip-value">{formatMoney(payload[0].value)}</p>
-      </div>
-    );
-  };
 
   return (
     <div className="page">
@@ -90,7 +91,7 @@ export default function DashboardPage() {
 
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); refetchCashFlow(); }} /> : (
         <>
           <div className="kpi-grid">
             <KpiCard title="Revenue" value={formatMoney(stats.totalRevenue)} subtitle={`${stats.deliveredOrders.toLocaleString()} orders`} icon={TrendingUp} color="#4ECDC4" />
@@ -119,7 +120,7 @@ export default function DashboardPage() {
                   <BarChart data={revenueByProduct} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
                     <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={formatMoneyShort} />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<DashboardTooltip />} />
                     <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                       {revenueByProduct.map((entry, i) => (
                         <Cell key={i} fill={entry.fill} />
@@ -142,7 +143,7 @@ export default function DashboardPage() {
                         <Cell key={i} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<DashboardTooltip />} />
                   </RPieChart>
                 </ResponsiveContainer>
               ) : (

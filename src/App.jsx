@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AuthProvider, useAuth } from './lib/auth';
+import { AuthProvider } from './lib/auth';
+import { useAuth } from './lib/useAuth';
 import { SettingsProvider } from './lib/settings';
 import LoginScreen from './components/LoginScreen';
 import Sidebar from './components/Sidebar';

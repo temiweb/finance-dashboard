@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS finance_cash_flow (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Dashboard settings (PIN, products list, etc.)
+-- Dashboard settings (products list, exchange rate, feature flags, etc.)
 CREATE TABLE IF NOT EXISTS finance_settings (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
@@ -54,9 +54,7 @@ CREATE TABLE IF NOT EXISTS finance_settings (
 );
 
 -- Insert default settings
--- Default PIN is SHA-256("1234") — change via the app's Settings page after first login
 INSERT INTO finance_settings (key, value) VALUES
-  ('pin', '"03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"'),
   ('products', '["Net Repair Tape", "Mesh Tape", "Car Scratch Remover", "Deep Edge Crevice Brush"]'),
   ('currency', '{"nigeria": "₦", "ghana": "GH₵"}')
 ON CONFLICT (key) DO NOTHING;
@@ -67,12 +65,12 @@ ALTER TABLE finance_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_cash_flow ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_settings ENABLE ROW LEVEL SECURITY;
 
--- Open policies — auth is PIN-based (not Supabase Auth). The anon key is the
--- access boundary; PIN hashing protects the dashboard UI from unauthorised use.
-CREATE POLICY "Allow all on finance_revenue" ON finance_revenue FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_expenses" ON finance_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_cash_flow" ON finance_cash_flow FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all on finance_settings" ON finance_settings FOR ALL USING (true) WITH CHECK (true);
+-- RLS policies are deliberately not included in this bootstrap schema.
+-- IMPORTANT: This shared project uses Supabase email/password authentication and
+-- staff-based RLS. Its policies must be maintained with the CRM's database
+-- migrations, where the staff-table relationship is defined. Do not add permissive
+-- USING (true) policies here, and do not run this bootstrap schema against an
+-- existing production database.
 
 -- Indexes for common queries
 CREATE INDEX idx_revenue_date ON finance_revenue(date);

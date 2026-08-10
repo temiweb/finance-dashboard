@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Plus, Trash2, Sun, Moon, Lock, Package, Palette, Save, Check, AlertCircle, ArrowRightLeft, FlaskConical } from 'lucide-react';
-import { useSettings } from '../lib/settings';
-import { useAuth } from '../lib/auth';
+import { useSettings } from '../lib/useSettings';
+import { useAuth } from '../lib/useAuth';
 
 export default function SettingsPage() {
-  const { products, theme, setTheme, saveProducts, productColors, exchangeRate, saveExchangeRate, featureCogs, saveFeatureCogs } = useSettings();
+  const { products, theme, setTheme, saveProducts, exchangeRate, saveExchangeRate, featureCogs, saveFeatureCogs } = useSettings();
   const { user, changePassword } = useAuth();
 
   // COGS feature toggle state
@@ -22,7 +22,8 @@ export default function SettingsPage() {
   };
 
   // Products state
-  const [editProducts, setEditProducts] = useState(products);
+  const [editedProducts, setEditedProducts] = useState(null);
+  const editProducts = editedProducts ?? products;
   const [newProduct, setNewProduct] = useState('');
   const [productsSaving, setProductsSaving] = useState(false);
   const [productsMsg, setProductsMsg] = useState(null);
@@ -33,12 +34,12 @@ export default function SettingsPage() {
   const [pwMsg, setPwMsg] = useState(null);
 
   // Exchange rate state
-  const [editRate, setEditRate] = useState(String(exchangeRate));
+  const [editedRate, setEditedRate] = useState(null);
+  const editRate = editedRate ?? String(exchangeRate);
   const [rateSaving, setRateSaving] = useState(false);
   const [rateMsg, setRateMsg] = useState(null);
   const rateChanged = Number(editRate) !== exchangeRate;
 
-  // Sync editProducts when products change from context
   const productsChanged = JSON.stringify(editProducts) !== JSON.stringify(products);
 
   const handleAddProduct = () => {
@@ -48,13 +49,13 @@ export default function SettingsPage() {
       setProductsMsg({ type: 'error', text: 'Product already exists' });
       return;
     }
-    setEditProducts([...editProducts, trimmed]);
+    setEditedProducts([...editProducts, trimmed]);
     setNewProduct('');
     setProductsMsg(null);
   };
 
   const handleRemoveProduct = (index) => {
-    setEditProducts(editProducts.filter((_, i) => i !== index));
+    setEditedProducts(editProducts.filter((_, i) => i !== index));
     setProductsMsg(null);
   };
 
@@ -67,6 +68,7 @@ export default function SettingsPage() {
     const result = await saveProducts(editProducts);
     if (result.success) {
       setProductsMsg({ type: 'success', text: 'Products saved' });
+      setEditedProducts(null);
     } else {
       setProductsMsg({ type: 'error', text: result.error });
     }
@@ -240,7 +242,7 @@ export default function SettingsPage() {
                 min="1"
                 step="0.01"
                 value={editRate}
-                onChange={(e) => setEditRate(e.target.value)}
+                onChange={(e) => setEditedRate(e.target.value)}
                 className="rate-input"
               />
             </div>
@@ -265,6 +267,7 @@ export default function SettingsPage() {
                 setRateMsg(result.success
                   ? { type: 'success', text: 'Rate updated' }
                   : { type: 'error', text: result.error });
+                if (result.success) setEditedRate(null);
                 setRateSaving(false);
                 setTimeout(() => setRateMsg(null), 3000);
               }}

@@ -136,6 +136,16 @@ export function EmptyState({ icon: Icon, title, message, action }) {
   );
 }
 
+export function DataError({ message, onRetry }) {
+  return (
+    <div className="empty-state" role="alert">
+      <h3>Could not load data</h3>
+      <p>{message || 'Check your connection and permissions, then try again.'}</p>
+      {onRetry && <button className="btn-primary" onClick={onRetry}>Try again</button>}
+    </div>
+  );
+}
+
 // ── Loading Spinner ──
 export function Loader() {
   return (

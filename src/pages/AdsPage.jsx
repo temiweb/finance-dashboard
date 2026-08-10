@@ -2,9 +2,22 @@ import { useState, useMemo } from 'react';
 import { Megaphone, Target, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useRevenue, useExpenses } from '../hooks/useData';
-import { KpiCard, PeriodSelector, MarketFilter, EmptyState, Loader } from '../components/SharedUI';
+import { KpiCard, PeriodSelector, MarketFilter, EmptyState, Loader, DataError } from '../components/SharedUI';
 import { formatMoney, formatMoneyShort, PLATFORM_COLORS } from '../lib/utils';
-import { useSettings } from '../lib/settings';
+import { useSettings } from '../lib/useSettings';
+
+function AdsTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{data.fullName || data.name}</p>
+      <p>Ad Spend: {formatMoney(data.adSpend || data.spend)}</p>
+      {data.revenue !== undefined && <p>Revenue: {formatMoney(data.revenue)}</p>}
+      {data.roas !== undefined && <p>ROAS: {data.roas.toFixed(1)}x</p>}
+    </div>
+  );
+}
 
 export default function AdsPage() {
   const { convertToNaira } = useSettings();
@@ -12,9 +25,10 @@ export default function AdsPage() {
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
 
-  const { data: revenue, loading: rl } = useRevenue(period, market, customRange);
-  const { data: expenses, loading: el } = useExpenses(period, market, customRange);
+  const { data: revenue, loading: rl, error: revenueError, refetch: refetchRevenue } = useRevenue(period, market, customRange);
+  const { data: expenses, loading: el, error: expensesError, refetch: refetchExpenses } = useExpenses(period, market, customRange);
   const loading = rl || el;
+  const error = revenueError || expensesError;
 
   const adData = useMemo(() => {
     const adExpenses = expenses.filter(e => e.category === 'ad_spend');
@@ -74,19 +88,6 @@ export default function AdsPage() {
     return { totalAdSpend, totalRevenue, totalOrders, roas, costPerPurchase, aov, byProduct, byCampaign, byPlatform };
   }, [revenue, expenses, convertToNaira]);
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const d = payload[0].payload;
-    return (
-      <div className="chart-tooltip">
-        <p className="chart-tooltip-label">{d.fullName || d.name}</p>
-        <p>Ad Spend: {formatMoney(d.adSpend || d.spend)}</p>
-        {d.revenue !== undefined && <p>Revenue: {formatMoney(d.revenue)}</p>}
-        {d.roas !== undefined && <p>ROAS: {d.roas.toFixed(1)}x</p>}
-      </div>
-    );
-  };
-
   return (
     <div className="page">
       <div className="page-header">
@@ -98,7 +99,7 @@ export default function AdsPage() {
       </div>
       <PeriodSelector value={period} onChange={setPeriod} customRange={customRange} onCustomRange={setCustomRange} />
 
-      {loading ? <Loader /> : (
+      {loading ? <Loader /> : error ? <DataError message={error} onRetry={() => { refetchRevenue(); refetchExpenses(); }} /> : (
         <>
           <div className="kpi-grid kpi-grid-3">
             <KpiCard title="ROAS" value={adData.roas > 0 ? `${adData.roas.toFixed(1)}x` : '—'} subtitle={`Ad spend: ${formatMoney(adData.totalAdSpend)}`} icon={Megaphone} color="#F4A142" />
@@ -117,7 +118,7 @@ export default function AdsPage() {
                     <BarChart data={adData.byProduct} margin={{ top: 10, right: 10, bottom: 30, left: 10 }}>
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-20} textAnchor="end" />
                       <YAxis tick={{ fontSize: 11 }} tickFormatter={formatMoneyShort} />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<AdsTooltip />} />
                       <Bar dataKey="adSpend" name="Ad Spend" fill="#E8594F" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="revenue" name="Revenue" fill="#4ECDC4" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -132,7 +133,7 @@ export default function AdsPage() {
                     <BarChart data={adData.byCampaign} layout="vertical" margin={{ top: 10, right: 10, bottom: 10, left: 80 }}>
                       <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={formatMoneyShort} />
                       <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={75} />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip content={<AdsTooltip />} />
                       <Bar dataKey="spend" fill="#F4A142" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>

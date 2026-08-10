@@ -5,6 +5,10 @@
 -- Drops the old structure and recreates for payment tracking.
 -- ============================================================
 
+-- LEGACY: Do not run this file against a database with finance_cash_flow data.
+-- It is retained only as a reference for the pre-May 2025 schema. Production
+-- changes must use a non-destructive CRM migration that preserves staff-based RLS.
+/*
 -- Drop old table (only if you haven't entered data yet)
 DROP TABLE IF EXISTS finance_cash_flow;
 
@@ -20,10 +24,10 @@ CREATE TABLE finance_cash_flow (
 );
 
 -- RLS — require authenticated Supabase session (matches supabase-schema.sql)
-ALTER TABLE finance_cash_flow ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Auth only on finance_cash_flow" ON finance_cash_flow
-  FOR ALL USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+-- RLS policies are intentionally not defined in this legacy migration. They are
+-- owned by the shared CRM database migrations and must enforce staff-role rules.
 
 -- Indexes
 CREATE INDEX idx_cash_flow_date ON finance_cash_flow(date);
 CREATE INDEX idx_cash_flow_market ON finance_cash_flow(market);
+*/
