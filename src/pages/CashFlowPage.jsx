@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Plus, Trash2, Wallet } from 'lucide-react';
+import { Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { useCashFlow, addCashFlow, deleteRecord } from '../hooks/useData';
+import { useCashFlow, addCashFlow, deleteRecord, updateRecord } from '../hooks/useData';
 import { KpiCard, PeriodSelector, MarketFilter, Modal, EmptyState, Loader, FormError, Pagination, DataError } from '../components/SharedUI';
 import { formatMoney, formatDate, MARKETS, formatMoneyShort } from '../lib/utils';
 
@@ -11,6 +11,7 @@ export default function CashFlowPage() {
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [page, setPage] = useState(1);
@@ -43,6 +44,34 @@ export default function CashFlowPage() {
     return { totalCollected, ngCollected, ghCollected, entries, bySource };
   }, [data]);
 
+  const emptyForm = {
+    date: new Date().toISOString().split('T')[0],
+    source: '',
+    market: 'nigeria',
+    amount: '',
+    notes: '',
+  };
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setFormError('');
+    setShowAdd(true);
+  };
+
+  const openEdit = (entry) => {
+    setEditingId(entry.id);
+    setForm({
+      date: entry.date,
+      source: entry.source || '',
+      market: entry.market,
+      amount: String(entry.amount),
+      notes: entry.notes || '',
+    });
+    setFormError('');
+    setShowAdd(true);
+  };
+
   // Chart: payments over time — use raw date as key to avoid cross-year collisions
   const chartData = useMemo(() => {
     const byDate = {};
@@ -62,15 +91,21 @@ export default function CashFlowPage() {
     setFormError('');
     setSaving(true);
     try {
-      await addCashFlow({
+      const entry = {
         date: form.date,
         source: form.source.trim(),
         market: form.market,
         amount: Number(form.amount),
         notes: form.notes || null,
-      });
+      };
+      if (editingId) {
+        await updateRecord('finance_cash_flow', editingId, entry);
+      } else {
+        await addCashFlow(entry);
+      }
       setShowAdd(false);
-      setForm({ date: new Date().toISOString().split('T')[0], source: '', market: 'nigeria', amount: '', notes: '' });
+      setEditingId(null);
+      setForm(emptyForm);
       refetch();
     } catch (e) {
       setFormError('Failed to save: ' + e.message);
@@ -93,7 +128,7 @@ export default function CashFlowPage() {
     <div className="page">
       <div className="page-header">
         <h1>Cash Flow</h1>
-        <button className="btn-primary" onClick={() => { setShowAdd(true); setFormError(''); }}>
+        <button className="btn-primary" onClick={openAdd}>
           <Plus size={16} /> Record Payment
         </button>
       </div>
@@ -144,7 +179,7 @@ export default function CashFlowPage() {
           )}
 
           {data.length === 0 ? (
-            <EmptyState icon={Wallet} title="No payments recorded" message="Record payments from delivery agents and exchangers" action={<button className="btn-primary" onClick={() => setShowAdd(true)}>Record Payment</button>} />
+            <EmptyState icon={Wallet} title="No payments recorded" message="Record payments from delivery agents and exchangers" action={<button className="btn-primary" onClick={openAdd}>Record Payment</button>} />
           ) : (
             <div className="data-table-wrap">
               <table className="data-table">
@@ -167,6 +202,7 @@ export default function CashFlowPage() {
                       <td className="td-amount positive">{formatMoney(c.amount)}</td>
                       <td className="td-desc">{c.notes || '—'}</td>
                       <td>
+                        <button className="btn-icon btn-edit" onClick={() => openEdit(c)}><Pencil size={14} /></button>
                         <button className="btn-icon" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></button>
                       </td>
                     </tr>
@@ -179,7 +215,7 @@ export default function CashFlowPage() {
         </>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Record Payment">
+      <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setEditingId(null); }} title={editingId ? 'Edit Payment' : 'Record Payment'}>
         <div className="form-grid">
           <label>
             <span>Date</span>
@@ -208,7 +244,7 @@ export default function CashFlowPage() {
         <div className="form-actions">
           <button className="btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving || !form.source || !form.amount}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Save'}
           </button>
         </div>
       </Modal>
