@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS finance_expenses (
   batch_name TEXT,
   supplier TEXT,
   units_received INTEGER CHECK (units_received IS NULL OR units_received > 0),
+  received_date DATE,
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

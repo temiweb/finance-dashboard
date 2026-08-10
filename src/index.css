@@ -187,6 +187,11 @@ html, body, #root {
 .review-clear svg { color: #4ECDC4; }
 .review-table td { padding-top: 0.65rem; padding-bottom: 0.65rem; }
 .review-action { color: var(--primary); font-size: 0.76rem; }
+.inventory-actions { white-space: nowrap; }
+.inventory-actions .btn-icon + .btn-icon { margin-left: 0.25rem; }
+.batch-status { display: inline-block; padding: 0.2rem 0.45rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+.batch-status.transit { background: #f4a1421f; color: #c77812; }
+.batch-status.received { background: #4ecdc41f; color: #238c83; }
 
 .page-filters {
   display: flex;

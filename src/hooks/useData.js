@@ -223,7 +223,7 @@ export async function addCashFlow(entry) {
 
 export async function addInventoryBatch(batch) {
   const batchId = crypto.randomUUID();
-  const sharedFields = {
+  const entry = {
     date: batch.date,
     product: batch.product,
     market: batch.market,
@@ -232,21 +232,49 @@ export async function addInventoryBatch(batch) {
     batch_name: batch.batchName,
     supplier: batch.supplier || null,
     units_received: batch.unitsReceived,
+    received_date: null,
+    category: 'stock_purchase',
+    amount: batch.stockCost,
+    description: 'Inventory purchase',
   };
-  const expenseRows = [
-    { category: 'stock_purchase', amount: batch.stockCost, description: 'Inventory purchase' },
-    { category: 'import_shipping', amount: batch.shippingCost, description: 'Freight, duty, and clearing' },
-    { category: 'other', amount: batch.otherCost, description: 'Other batch costs' },
-  ]
-    .filter(row => row.amount > 0)
-    .map(row => ({ ...sharedFields, ...row }));
 
   const { data, error } = await supabase
     .from('finance_expenses')
-    .insert(expenseRows)
+    .insert([entry])
     .select();
   if (error) throw error;
   return data;
+}
+
+export async function addInventoryBatchCost(batch, cost) {
+  const { data, error } = await supabase
+    .from('finance_expenses')
+    .insert([{
+      date: cost.date,
+      product: batch.product,
+      market: batch.market,
+      nigeria_share: batch.market === 'both' ? batch.nigeriaShare : 100,
+      batch_id: batch.id,
+      batch_name: batch.batchName,
+      supplier: batch.supplier || null,
+      units_received: batch.unitsReceived,
+      received_date: batch.receivedDate || null,
+      category: cost.category,
+      amount: cost.amount,
+      description: cost.description || null,
+    }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function markInventoryBatchReceived(batchId, receivedDate) {
+  const { error } = await supabase
+    .from('finance_expenses')
+    .update({ received_date: receivedDate })
+    .eq('batch_id', batchId);
+  if (error) throw error;
 }
 
 export async function deleteInventoryBatch(batchId) {
