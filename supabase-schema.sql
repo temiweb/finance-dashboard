@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS finance_revenue (
   quantity INTEGER NOT NULL DEFAULT 1,
   unit_price NUMERIC(12,2) NOT NULL,
   total_amount NUMERIC(12,2) NOT NULL,
+  exchange_rate NUMERIC(12,4) CHECK (exchange_rate IS NULL OR exchange_rate > 0),
   source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'crm')),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

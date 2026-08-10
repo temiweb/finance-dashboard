@@ -30,7 +30,7 @@ export default function ProfitabilityPage() {
   const error = revenueError || expensesError;
 
   const { overall, byProduct, byMarket } = useMemo(() => {
-    const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
+    const totalRev = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
     const totalCogs = revenue.reduce((s, r) => s + (r.cogs || 0), 0);
 
     // When COGS is on, stock purchases are represented by COGS (cost as it sells),
@@ -49,7 +49,7 @@ export default function ProfitabilityPage() {
     const prodCogsMap = {};
     const prodExpMap = {};
     revenue.forEach(r => {
-      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
+      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
       prodCogsMap[r.product] = (prodCogsMap[r.product] || 0) + (r.cogs || 0);
     });
     opexExpenses.forEach(expense => {
@@ -78,7 +78,7 @@ export default function ProfitabilityPage() {
     const mktCogsMap = {};
     const mktExpMap = {};
     revenue.forEach(r => {
-      mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market);
+      mktRevMap[r.market] = (mktRevMap[r.market] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
       mktCogsMap[r.market] = (mktCogsMap[r.market] || 0) + (r.cogs || 0);
     });
     const visibleMarkets = market === 'all' ? ['nigeria', 'ghana'] : [market];

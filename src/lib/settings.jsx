@@ -115,8 +115,11 @@ export function SettingsProvider({ children }) {
   }, []);
 
   // Convert GH₵ to ₦
-  const convertToNaira = useCallback((amount, market) => {
-    if (market === 'ghana') return Number(amount) * exchangeRate;
+  const convertToNaira = useCallback((amount, market, recordedRate = null) => {
+    if (market === 'ghana') {
+      const rate = Number(recordedRate);
+      return Number(amount) * (Number.isFinite(rate) && rate > 0 ? rate : exchangeRate);
+    }
     return Number(amount);
   }, [exchangeRate]);
 

@@ -6,7 +6,7 @@ import { formatMoney, formatDate, MARKETS } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
 
 export default function RevenuePage() {
-  const { products: PRODUCTS, convertToNaira } = useSettings();
+  const { products: PRODUCTS, convertToNaira, exchangeRate } = useSettings();
   const [period, setPeriod] = useState('month');
   const [market, setMarket] = useState('all');
   const [customRange, setCustomRange] = useState(null);
@@ -27,12 +27,13 @@ export default function RevenuePage() {
     quantity: '',
     unit_price: '',
     total_amount: '',
+    exchange_rate: String(exchangeRate),
     notes: '',
   };
   const [form, setForm] = useState(emptyForm);
 
  // Always calculate in naira (converted for Ghana)
-  const totalRevenueNaira = data.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
+  const totalRevenueNaira = data.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
   const totalOrders = data.reduce((s, r) => s + (r.quantity || 1), 0);
 
   // Original cedis total (only meaningful when Ghana filter is active)
@@ -49,6 +50,9 @@ export default function RevenuePage() {
   const handleSave = async () => {
     if (!form.date) return setFormError('Date is required.');
     if (computedTotal <= 0) return setFormError('Enter a valid amount greater than zero.');
+    if (form.market === 'ghana' && (!form.exchange_rate || Number(form.exchange_rate) <= 0)) {
+      return setFormError('Enter a valid Ghana-to-naira exchange rate.');
+    }
     setFormError('');
     setSaving(true);
     try {
@@ -59,6 +63,7 @@ export default function RevenuePage() {
         quantity: Number(form.quantity) || 1,
         unit_price: Number(form.unit_price) || computedTotal,
         total_amount: computedTotal,
+        exchange_rate: form.market === 'ghana' ? Number(form.exchange_rate) : null,
         source: 'manual',
         notes: form.notes || null,
       };
@@ -95,6 +100,7 @@ export default function RevenuePage() {
       quantity: String(entry.quantity || ''),
       unit_price: String(entry.unit_price || ''),
       total_amount: String(entry.total_amount || ''),
+      exchange_rate: String(entry.exchange_rate ?? exchangeRate),
       notes: entry.notes || '',
     });
     setShowModal(true);
@@ -219,12 +225,18 @@ export default function RevenuePage() {
             <span>Unit Price (optional)</span>
             <input type="number" min="0" placeholder="Auto if total + qty given" value={form.unit_price} onChange={(e) => setForm({ ...form, unit_price: e.target.value })} />
           </label>
+          {form.market === 'ghana' && (
+            <label>
+              <span>GH₵ → ₦ Rate</span>
+              <input type="number" min="0.01" step="0.01" value={form.exchange_rate} onChange={(e) => setForm({ ...form, exchange_rate: e.target.value })} />
+            </label>
+          )}
           <label className="full-width">
             <span>Notes (optional)</span>
             <input type="text" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </label>
         </div>
-        <p className="form-hint">Enter a total amount directly, or fill qty × unit price to calculate it.</p>
+        <p className="form-hint">Enter a total amount directly, or fill qty × unit price to calculate it. Ghana entries save the displayed exchange rate for historical reporting.</p>
         {computedTotal > 0 && (
           <div className="form-preview">
             Total: {formatMoney(computedTotal, form.market)}

@@ -33,7 +33,7 @@ export default function AdsPage() {
   const adData = useMemo(() => {
     const adExpenses = expenses.filter(e => e.category === 'ad_spend');
     const totalAdSpend = adExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
-    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
+    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
     const totalOrders = revenue.reduce((s, r) => s + (r.quantity || 1), 0);
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
     const costPerPurchase = totalOrders > 0 ? totalAdSpend / totalOrders : 0;
@@ -49,7 +49,7 @@ export default function AdsPage() {
       }
     });
     revenue.forEach(r => {
-      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market);
+      prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
       prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (r.quantity || 1);
     });
 

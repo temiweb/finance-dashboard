@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const error = revenueError || expensesError || cashFlowError;
 
   const stats = useMemo(() => {
-    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market), 0);
+    const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
     const totalAdSpend = expenses
       .filter(expense => expense.category === 'ad_spend')
       .reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const revenueByProduct = useMemo(() => {
     const map = {};
     revenue.forEach(r => {
-      map[r.product] = (map[r.product] || 0) + convertToNaira(r.total_amount, r.market);
+      map[r.product] = (map[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
     });
     return Object.entries(map).map(([name, value]) => ({
       name: name.length > 15 ? name.slice(0, 14) + '…' : name,
