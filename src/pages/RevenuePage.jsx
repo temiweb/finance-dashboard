@@ -68,7 +68,7 @@ export default function RevenuePage() {
         market: form.market,
         quantity: Number(form.quantity) || 1,
         delivered_orders: form.delivered_orders ? Number(form.delivered_orders) : null,
-        unit_price: Number(form.unit_price) || computedTotal,
+        unit_price: computedTotal / (Number(form.quantity) || 1),
         total_amount: computedTotal,
         exchange_rate: form.market === 'ghana' ? Number(form.exchange_rate) : null,
         source: 'manual',
@@ -187,7 +187,7 @@ export default function RevenuePage() {
                       <td><span className={`market-badge ${r.market}`}>{r.market}</span></td>
                       <td>{r.quantity}</td>
                       <td>{r.delivered_orders || '—'}</td>
-                      <td>{formatMoney(r.unit_price, r.market)}</td>
+                      <td>{formatMoney(r.source === 'manual' && Number(r.quantity) > 0 ? Number(r.total_amount) / Number(r.quantity) : r.unit_price, r.market)}</td>
                       <td className="td-amount">{formatMoney(r.total_amount, r.market)}</td>
                       <td><span className={`source-badge ${r.source}`}>{r.source}</span></td>
                       <td><span className={`status-badge ${r.status || ''}`}>{r.status || '—'}</span></td>
