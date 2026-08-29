@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { CircleCheck, Package, Plus, ReceiptText, Trash2, Truck } from 'lucide-react';
-import { addInventoryBatch, addInventoryBatchCost, deleteInventoryBatch, markInventoryBatchReceived, useInventoryBatchExpenses } from '../hooks/useData';
+import { CircleCheck, Eye, Package, Pencil, Plus, ReceiptText, Trash2, Truck } from 'lucide-react';
+import { addInventoryBatch, addInventoryBatchCost, deleteInventoryBatch, markInventoryBatchReceived, updateInventoryBatch, updateInventoryBatchCost, useInventoryBatchExpenses } from '../hooks/useData';
 import { DataError, EmptyState, FormError, KpiCard, Loader, Modal } from '../components/SharedUI';
 import { formatDate, formatMoney, MARKETS } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
@@ -9,6 +9,9 @@ export default function InventoryPage() {
   const { products } = useSettings();
   const { data, loading, error, refetch } = useInventoryBatchExpenses();
   const [showModal, setShowModal] = useState(false);
+  const [editingBatch, setEditingBatch] = useState(null);
+  const [detailBatch, setDetailBatch] = useState(null);
+  const [editingCost, setEditingCost] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [costBatch, setCostBatch] = useState(null);
@@ -43,12 +46,17 @@ export default function InventoryPage() {
           stockCost: 0,
           shippingCost: 0,
           otherCost: 0,
+          expenses: [],
         });
       }
       const batch = grouped.get(expense.batch_id);
+      batch.expenses.push(expense);
       if (expense.received_date) batch.receivedDate = expense.received_date;
       const amount = Number(expense.amount) || 0;
-      if (expense.category === 'stock_purchase') batch.stockCost += amount;
+      if (expense.category === 'stock_purchase') {
+        batch.date = expense.date;
+        batch.stockCost += amount;
+      }
       if (expense.category === 'import_shipping') batch.shippingCost += amount;
       if (expense.category === 'other') batch.otherCost += amount;
     });
@@ -67,6 +75,7 @@ export default function InventoryPage() {
   const unitCost = Number(form.unitsReceived) > 0 ? totalCost / Number(form.unitsReceived) : 0;
 
   const openAdd = () => {
+    setEditingBatch(null);
     setForm({
       date: new Date().toISOString().split('T')[0],
       product: products[0] || '',
@@ -81,6 +90,22 @@ export default function InventoryPage() {
     setShowModal(true);
   };
 
+  const openEditBatch = (batch) => {
+    setEditingBatch(batch);
+    setForm({
+      date: batch.date,
+      product: batch.product,
+      batchName: batch.batchName,
+      supplier: batch.supplier || '',
+      market: batch.market,
+      nigeriaShare: String(batch.nigeriaShare),
+      unitsReceived: String(batch.unitsReceived),
+      stockCost: String(batch.stockCost),
+    });
+    setFormError('');
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     if (!form.date || !form.product || !form.batchName.trim()) return setFormError('Stock purchase date, product, and batch name are required.');
     if (!Number.isInteger(Number(form.unitsReceived)) || Number(form.unitsReceived) <= 0) return setFormError('Units expected must be a whole number greater than zero.');
@@ -90,7 +115,7 @@ export default function InventoryPage() {
     setSaving(true);
     setFormError('');
     try {
-      await addInventoryBatch({
+      const batch = {
         date: form.date,
         product: form.product,
         batchName: form.batchName.trim(),
@@ -99,14 +124,27 @@ export default function InventoryPage() {
         nigeriaShare: Number(form.nigeriaShare),
         unitsReceived: Number(form.unitsReceived),
         stockCost: Number(form.stockCost),
-      });
+      };
+      if (editingBatch) {
+        await updateInventoryBatch(editingBatch, batch);
+      } else {
+        await addInventoryBatch(batch);
+      }
       setShowModal(false);
+      setEditingBatch(null);
       refetch();
     } catch (saveError) {
       setFormError(`Failed to save batch: ${saveError.message}`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const openEditCost = (expense) => {
+    setEditingCost(expense);
+    setCostForm({ date: expense.date, category: expense.category, amount: String(expense.amount), description: expense.description || '' });
+    setDetailBatch(null);
+    setFormError('');
   };
 
   const openAddCost = (batch) => {
@@ -120,8 +158,13 @@ export default function InventoryPage() {
     setSaving(true);
     setFormError('');
     try {
-      await addInventoryBatchCost(costBatch, { ...costForm, amount: Number(costForm.amount) });
+      if (editingCost) {
+        await updateInventoryBatchCost(editingCost.id, { ...costForm, amount: Number(costForm.amount) });
+      } else {
+        await addInventoryBatchCost(costBatch, { ...costForm, amount: Number(costForm.amount) });
+      }
       setCostBatch(null);
+      setEditingCost(null);
       refetch();
     } catch (saveError) {
       setFormError(`Failed to add cost: ${saveError.message}`);
@@ -213,6 +256,8 @@ export default function InventoryPage() {
                       <td className="td-amount">{formatMoney(batch.totalCost)}</td>
                       <td className="td-amount positive">{formatMoney(batch.unitCost)}</td>
                       <td className="inventory-actions">
+                        <button className="btn-icon" title="View batch details" onClick={() => setDetailBatch(batch)}><Eye size={14} /></button>
+                        <button className="btn-icon btn-edit" title="Edit batch" onClick={() => openEditBatch(batch)}><Pencil size={14} /></button>
                         <button className="btn-icon" title="Add a batch cost" onClick={() => openAddCost(batch)}><ReceiptText size={14} /></button>
                         {!batch.receivedDate && <button className="btn-icon" title="Mark as received" onClick={() => openReceipt(batch)}><Truck size={14} /></button>}
                         <button className="btn-icon" title="Delete batch" onClick={() => handleDelete(batch)}><Trash2 size={14} /></button>
@@ -226,7 +271,7 @@ export default function InventoryPage() {
         </>
       )}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Inventory Batch">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditingBatch(null); }} title={editingBatch ? 'Edit Inventory Batch' : 'Add Inventory Batch'}>
         <div className="form-grid">
           <label><span>Stock Purchase Date</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} /></label>
           <label>
@@ -251,12 +296,12 @@ export default function InventoryPage() {
         <p className="form-hint">Save the stock purchase now. Add freight, duty, and other costs later on their actual payment dates, then mark the batch received.</p>
         <FormError message={formError} />
         <div className="form-actions">
-          <button className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Batch'}</button>
+          <button className="btn-secondary" onClick={() => { setShowModal(false); setEditingBatch(null); }}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editingBatch ? 'Save Changes' : 'Save Batch'}</button>
         </div>
       </Modal>
 
-      <Modal isOpen={Boolean(costBatch)} onClose={() => setCostBatch(null)} title={`Add Cost — ${costBatch?.batchName || ''}`}>
+      <Modal isOpen={Boolean(costBatch) || Boolean(editingCost)} onClose={() => { setCostBatch(null); setEditingCost(null); }} title={editingCost ? 'Edit Batch Cost' : `Add Cost — ${costBatch?.batchName || ''}`}>
         <div className="form-grid">
           <label><span>Payment Date</span><input type="date" value={costForm.date} onChange={(event) => setCostForm({ ...costForm, date: event.target.value })} /></label>
           <label><span>Cost Type</span><select value={costForm.category} onChange={(event) => setCostForm({ ...costForm, category: event.target.value })}><option value="import_shipping">Freight, Duty & Clearing</option><option value="other">Other Batch Cost</option></select></label>
@@ -265,7 +310,15 @@ export default function InventoryPage() {
         </div>
         <p className="form-hint">This cost is added to the batch unit cost and recorded as an expense on this payment date.</p>
         <FormError message={formError} />
-        <div className="form-actions"><button className="btn-secondary" onClick={() => setCostBatch(null)}>Cancel</button><button className="btn-primary" onClick={handleAddCost} disabled={saving}>{saving ? 'Saving…' : 'Add Cost'}</button></div>
+        <div className="form-actions"><button className="btn-secondary" onClick={() => { setCostBatch(null); setEditingCost(null); }}>Cancel</button><button className="btn-primary" onClick={handleAddCost} disabled={saving}>{saving ? 'Saving…' : editingCost ? 'Save Changes' : 'Add Cost'}</button></div>
+      </Modal>
+
+      <Modal isOpen={Boolean(detailBatch)} onClose={() => setDetailBatch(null)} title={`Inventory Batch — ${detailBatch?.batchName || ''}`}>
+        {detailBatch && <>
+          <div className="settlement-detail-grid"><span>Product<strong>{detailBatch.product}</strong></span><span>Supplier<strong>{detailBatch.supplier || '—'}</strong></span><span>Units<strong>{detailBatch.unitsReceived}</strong></span><span>Status<strong>{detailBatch.receivedDate ? `Received ${formatDate(detailBatch.receivedDate)}` : 'In transit'}</strong></span><span>Landed cost<strong>{formatMoney(detailBatch.totalCost)}</strong></span><span>Cost per unit<strong>{formatMoney(detailBatch.unitCost)}</strong></span></div>
+          <h4 className="detail-heading">Recorded Costs</h4><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead><tbody>{detailBatch.expenses.map(expense => <tr key={expense.id}><td>{formatDate(expense.date)}</td><td>{expense.category === 'stock_purchase' ? 'Stock purchase' : expense.category === 'import_shipping' ? 'Freight / Duty' : 'Other'}</td><td>{formatMoney(expense.amount)}</td><td>{expense.description || '—'}</td><td><button className="btn-icon btn-edit" onClick={() => openEditCost(expense)}><Pencil size={14} /></button></td></tr>)}</tbody></table></div>
+          <div className="form-actions"><button className="btn-secondary" onClick={() => setDetailBatch(null)}>Close</button><button className="btn-primary" onClick={() => { setDetailBatch(null); openEditBatch(detailBatch); }}><Pencil size={16} /> Edit Batch</button></div>
+        </>}
       </Modal>
 
       <Modal isOpen={Boolean(receiptBatch)} onClose={() => setReceiptBatch(null)} title={`Mark Received — ${receiptBatch?.batchName || ''}`}>

@@ -59,6 +59,15 @@ CREATE TABLE IF NOT EXISTS finance_cash_flow (
   billing_date DATE,
   expected_amount_ghs NUMERIC(12,2),
   exchange_rate NUMERIC(12,4),
+  partner_name TEXT,
+  total_products_ghs NUMERIC(12,2),
+  discount_ghs NUMERIC(12,2) NOT NULL DEFAULT 0,
+  delivery_fees_ghs NUMERIC(12,2),
+  vendor_expenses_ghs NUMERIC(12,2),
+  commission_ghs NUMERIC(12,2),
+  cod_fee_ghs NUMERIC(12,2),
+  tax_ghs NUMERIC(12,2),
+  reporting_exchange_rate NUMERIC(12,4),
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

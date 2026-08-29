@@ -198,6 +198,12 @@ html, body, #root {
 .settlement-lines-header h4 { margin: 0; font-size: 0.9rem; }
 .settlement-line { display: grid; grid-template-columns: minmax(120px, 1.5fr) repeat(3, minmax(80px, 1fr)) auto; gap: 0.5rem; margin-bottom: 0.5rem; }
 .settlement-line input, .settlement-line select { min-width: 0; }
+.settlement-actions { white-space: nowrap; }
+.settlement-actions .btn-icon + .btn-icon { margin-left: 0.25rem; }
+.settlement-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; margin-bottom: 1.25rem; }
+.settlement-detail-grid span { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.65rem; border-radius: 8px; background: var(--bg-hover); color: var(--text-muted); font-size: 0.75rem; }
+.settlement-detail-grid strong { color: var(--text); font-size: 0.88rem; }
+.detail-heading { margin: 0 0 0.6rem; font-size: 0.9rem; }
 @media (max-width: 700px) { .settlement-line { grid-template-columns: 1fr 1fr; } }
 
 .page-filters {

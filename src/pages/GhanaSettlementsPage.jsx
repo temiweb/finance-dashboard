@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { BanknoteArrowDown, CheckCircle2, Plus, ReceiptText } from 'lucide-react';
-import { createGhanaSettlement, receiveGhanaSettlement, useGhanaSettlements } from '../hooks/useData';
+import { BanknoteArrowDown, CheckCircle2, Eye, Pencil, Plus, ReceiptText } from 'lucide-react';
+import { createGhanaSettlement, getGhanaSettlementDetails, receiveGhanaSettlement, updateGhanaSettlement, useGhanaSettlements } from '../hooks/useData';
 import { DataError, EmptyState, FormError, KpiCard, Loader, Modal } from '../components/SharedUI';
 import { formatDate, formatMoney } from '../lib/utils';
 import { useSettings } from '../lib/useSettings';
@@ -9,6 +9,9 @@ export default function GhanaSettlementsPage() {
   const { products, exchangeRate } = useSettings();
   const { data, loading, error, refetch } = useGhanaSettlements();
   const [showForm, setShowForm] = useState(false);
+  const [details, setDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(null);
   const [paymentSettlement, setPaymentSettlement] = useState(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -16,7 +19,7 @@ export default function GhanaSettlementsPage() {
     billingDate: new Date().toISOString().split('T')[0],
     partner: '',
     reportingRate: String(exchangeRate),
-    totalProducts: '', deliveryFees: '', vendorExpenses: '', commission: '', codFee: '', tax: '',
+    totalProducts: '', discount: '', deliveryFees: '', vendorExpenses: '', commission: '', codFee: '', tax: '',
     lines: [{ product: products[0] || '', units: '', orders: '', netRevenue: '' }],
   });
   const [form, setForm] = useState(emptyForm);
@@ -33,8 +36,40 @@ export default function GhanaSettlementsPage() {
 
   const pending = data.filter(item => item.status === 'pending');
   const received = data.filter(item => item.status === 'received');
-  const openAdd = () => { setForm(emptyForm()); setFormError(''); setShowForm(true); };
+  const openAdd = () => { setEditingDetails(null); setForm(emptyForm()); setFormError(''); setShowForm(true); };
   const updateLine = (index, changes) => setForm(current => ({ ...current, lines: current.lines.map((line, lineIndex) => lineIndex === index ? { ...line, ...changes } : line) }));
+
+  const openDetails = async (settlement) => {
+    setDetailsLoading(true);
+    setFormError('');
+    try {
+      setDetails(await getGhanaSettlementDetails(settlement));
+    } catch (loadError) {
+      setFormError(`Failed to load settlement details: ${loadError.message}`);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const openEdit = (loadedDetails) => {
+    setEditingDetails(loadedDetails);
+    setForm(loadedDetails.form);
+    setDetails(null);
+    setFormError('');
+    setShowForm(true);
+  };
+
+  const editSettlement = async (settlement) => {
+    setDetailsLoading(true);
+    setFormError('');
+    try {
+      openEdit(await getGhanaSettlementDetails(settlement));
+    } catch (loadError) {
+      setFormError(`Failed to load settlement for editing: ${loadError.message}`);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.billingDate || !form.partner.trim()) return setFormError('Billing date and delivery partner are required.');
@@ -46,13 +81,19 @@ export default function GhanaSettlementsPage() {
     setSaving(true);
     setFormError('');
     try {
-      await createGhanaSettlement({
+      const settlement = {
         ...form,
         partner: form.partner.trim(),
         reportingRate: Number(form.reportingRate),
         expectedPayout: summary.expectedPayout,
-      });
+      };
+      if (editingDetails) {
+        await updateGhanaSettlement(editingDetails, settlement);
+      } else {
+        await createGhanaSettlement(settlement);
+      }
       setShowForm(false);
+      setEditingDetails(null);
       refetch();
     } catch (saveError) {
       setFormError(`Failed to save settlement: ${saveError.message}`);
@@ -99,17 +140,18 @@ export default function GhanaSettlementsPage() {
               <td><span className={`batch-status ${item.status === 'received' ? 'received' : 'transit'}`}>{item.status === 'received' ? 'Paid' : 'Awaiting payment'}</span></td>
               <td className="td-amount positive">{item.status === 'received' ? formatMoney(item.amount) : '—'}</td>
               <td>{item.status === 'received' && item.exchange_rate ? `₦${Number(item.exchange_rate).toFixed(2)} / GHS` : '—'}</td>
-              <td>{item.status === 'pending' && <button className="btn-secondary btn-sm" onClick={() => openPayment(item)}>Record Payment</button>}</td>
+              <td className="settlement-actions"><button className="btn-icon" title="View details" onClick={() => openDetails(item)}><Eye size={14} /></button><button className="btn-icon btn-edit" title="Edit settlement" onClick={() => editSettlement(item)}><Pencil size={14} /></button>{item.status === 'pending' && <button className="btn-secondary btn-sm" onClick={() => openPayment(item)}>Record Payment</button>}</td>
             </tr>)}
           </tbody></table></div>
         )}
       </>}
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add Ghana Weekly Bill">
+      <Modal isOpen={showForm} onClose={() => { setShowForm(false); setEditingDetails(null); }} title={editingDetails ? 'Edit Ghana Weekly Bill' : 'Add Ghana Weekly Bill'}>
         <div className="form-grid">
           <label><span>Billing Date</span><input type="date" value={form.billingDate} onChange={event => setForm({ ...form, billingDate: event.target.value })} /></label>
           <label><span>Delivery Partner</span><input type="text" placeholder="e.g. Partner name" value={form.partner} onChange={event => setForm({ ...form, partner: event.target.value })} /></label>
           <label><span>Total Sum of Products (GHS)</span><input type="number" min="0" value={form.totalProducts} onChange={event => setForm({ ...form, totalProducts: event.target.value })} /></label>
+          <label><span>Discount (GHS, informational)</span><input type="number" min="0" value={form.discount} onChange={event => setForm({ ...form, discount: event.target.value })} /></label>
           <label><span>Total Delivery Fees (GHS)</span><input type="number" min="0" value={form.deliveryFees} onChange={event => setForm({ ...form, deliveryFees: event.target.value })} /></label>
           <label><span>Vendor Expenses (GHS)</span><input type="number" min="0" value={form.vendorExpenses} onChange={event => setForm({ ...form, vendorExpenses: event.target.value })} /></label>
           <label><span>Commission (GHS)</span><input type="number" min="0" value={form.commission} onChange={event => setForm({ ...form, commission: event.target.value })} /></label>
@@ -126,9 +168,23 @@ export default function GhanaSettlementsPage() {
             <input type="number" min="0" placeholder="Product revenue GHS" value={line.netRevenue} onChange={event => updateLine(index, { netRevenue: event.target.value })} />
             {form.lines.length > 1 && <button className="btn-icon" onClick={() => setForm({ ...form, lines: form.lines.filter((_, lineIndex) => lineIndex !== index) })}>×</button>}
           </div>)}
-          <p className="form-hint">Enter each product's amount after its delivery, commission, and COD fees. Vendor expenses and tax are recorded separately for the whole bill, so do not subtract them from a product row.</p>
+          <p className="form-hint">Discount is saved for reference only: VDL's displayed amount due does not deduct it again. Enter each product's amount after delivery, commission, and COD fees. Vendor expenses and tax stay separate for the whole bill.</p>
         </div>
-        <FormError message={formError} /><div className="form-actions"><button className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Bill'}</button></div>
+        <FormError message={formError} /><div className="form-actions"><button className="btn-secondary" onClick={() => { setShowForm(false); setEditingDetails(null); }}>Cancel</button><button className="btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : editingDetails ? 'Save Changes' : 'Save Bill'}</button></div>
+      </Modal>
+
+      <Modal isOpen={Boolean(details) || detailsLoading} onClose={() => setDetails(null)} title="Ghana Settlement Details">
+        {detailsLoading ? <Loader /> : details && <>
+          <div className="settlement-detail-grid">
+            <span>Partner<strong>{details.form.partner}</strong></span><span>Billing date<strong>{formatDate(details.form.billingDate)}</strong></span>
+            <span>Total products<strong>{formatMoney(details.form.totalProducts, 'ghana')}</strong></span><span>Discount (info only)<strong>{formatMoney(details.form.discount, 'ghana')}</strong></span>
+            <span>Delivery fees<strong>{formatMoney(details.form.deliveryFees, 'ghana')}</strong></span><span>Commission<strong>{formatMoney(details.form.commission, 'ghana')}</strong></span>
+            <span>COD fee<strong>{formatMoney(details.form.codFee, 'ghana')}</strong></span><span>Vendor expenses<strong>{formatMoney(details.form.vendorExpenses, 'ghana')}</strong></span>
+            <span>Tax<strong>{formatMoney(details.form.tax, 'ghana')}</strong></span><span>Amount due vendor<strong>{formatMoney(details.settlement.expected_amount_ghs, 'ghana')}</strong></span>
+          </div>
+          <h4 className="detail-heading">Product Revenue</h4><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Product</th><th>Units</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>{details.lines.map(line => <tr key={line.id}><td>{line.product}</td><td>{line.quantity}</td><td>{line.delivered_orders}</td><td>{formatMoney(line.total_amount, 'ghana')}</td></tr>)}</tbody></table></div>
+          <div className="form-actions"><button className="btn-secondary" onClick={() => setDetails(null)}>Close</button><button className="btn-primary" onClick={() => openEdit(details)}><Pencil size={16} /> Edit Settlement</button></div>
+        </>}
       </Modal>
 
       <Modal isOpen={Boolean(paymentSettlement)} onClose={() => setPaymentSettlement(null)} title="Record Ghana Payment">
