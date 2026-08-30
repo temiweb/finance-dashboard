@@ -35,15 +35,18 @@ export default function AdsPage() {
     const totalAdSpend = adExpenses.reduce((sum, expense) => sum + getExpenseAmount(expense, market), 0);
     const totalRevenue = revenue.reduce((s, r) => s + convertToNaira(r.total_amount, r.market, r.exchange_rate), 0);
     const totalDeliveredOrders = revenue.reduce((sum, item) => sum + (Number(item.delivered_orders) || 0), 0);
+    const totalDeliveredUnits = revenue.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     const hasUnknownDeliveredOrders = revenue.some(item => item.source === 'manual' && !Number(item.delivered_orders));
     const roas = totalAdSpend > 0 ? totalRevenue / totalAdSpend : 0;
     const costPerDeliveredOrder = !hasUnknownDeliveredOrders && totalDeliveredOrders > 0 ? totalAdSpend / totalDeliveredOrders : 0;
     const aov = !hasUnknownDeliveredOrders && totalDeliveredOrders > 0 ? totalRevenue / totalDeliveredOrders : 0;
+    const costPerDeliveredUnit = totalDeliveredUnits > 0 ? totalAdSpend / totalDeliveredUnits : 0;
 
     // By product
     const prodAdMap = {};
     const prodRevMap = {};
     const prodOrdMap = {};
+    const prodUnitMap = {};
     const productHasUnknownDeliveredOrders = {};
     adExpenses.forEach(expense => {
       if (expense.product) {
@@ -53,6 +56,7 @@ export default function AdsPage() {
     revenue.forEach(r => {
       prodRevMap[r.product] = (prodRevMap[r.product] || 0) + convertToNaira(r.total_amount, r.market, r.exchange_rate);
       prodOrdMap[r.product] = (prodOrdMap[r.product] || 0) + (Number(r.delivered_orders) || 0);
+      prodUnitMap[r.product] = (prodUnitMap[r.product] || 0) + (Number(r.quantity) || 0);
       if (r.source === 'manual' && !Number(r.delivered_orders)) productHasUnknownDeliveredOrders[r.product] = true;
     });
 
@@ -61,6 +65,7 @@ export default function AdsPage() {
       const spend = prodAdMap[p] || 0;
       const rev = prodRevMap[p] || 0;
       const orders = prodOrdMap[p] || 0;
+      const units = prodUnitMap[p] || 0;
       return {
         name: p.length > 12 ? p.slice(0, 11) + '…' : p,
         fullName: p,
@@ -68,7 +73,9 @@ export default function AdsPage() {
         revenue: rev,
         roas: spend > 0 ? rev / spend : 0,
         cpp: !productHasUnknownDeliveredOrders[p] && orders > 0 ? spend / orders : 0,
+        cpu: units > 0 ? spend / units : 0,
         orders,
+        units,
         hasUnknownDeliveredOrders: !!productHasUnknownDeliveredOrders[p],
       };
     });
@@ -93,7 +100,7 @@ export default function AdsPage() {
       .map(([name, spend]) => ({ name, spend, color: PLATFORM_COLORS[name] || '#95A5A6' }))
       .sort((a, b) => b.spend - a.spend);
 
-    return { totalAdSpend, totalRevenue, totalDeliveredOrders, hasUnknownDeliveredOrders, roas, costPerDeliveredOrder, aov, byProduct, byCampaign, byPlatform };
+    return { totalAdSpend, totalRevenue, totalDeliveredOrders, totalDeliveredUnits, hasUnknownDeliveredOrders, roas, costPerDeliveredOrder, costPerDeliveredUnit, aov, byProduct, byCampaign, byPlatform };
   }, [revenue, expenses, convertToNaira, market]);
 
   return (
@@ -118,7 +125,7 @@ export default function AdsPage() {
               icon={Target}
               color="#E8594F"
             />
-            <KpiCard title="Revenue in Period" value={formatMoney(adData.totalRevenue)} subtitle={`AOV: ${adData.aov > 0 ? formatMoney(adData.aov) : '—'}`} icon={TrendingUp} color="#4ECDC4" />
+            <KpiCard title="Ad Cost / Unit" value={adData.costPerDeliveredUnit > 0 ? formatMoney(adData.costPerDeliveredUnit) : '-'} subtitle={`${adData.totalDeliveredUnits} delivered units`} icon={TrendingUp} color="#4ECDC4" />
           </div>
 
           {adData.byProduct.length === 0 && adData.byCampaign.length === 0 ? (
@@ -190,7 +197,7 @@ export default function AdsPage() {
               <div className="data-table-wrap">
                 <table className="data-table">
                   <thead>
-                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Delivered Orders</th><th>Blended ROAS</th><th>Cost / Delivered Order</th></tr>
+                    <tr><th>Product</th><th>Ad Spend</th><th>Revenue</th><th>Delivered Units</th><th>Delivered Orders</th><th>Blended ROAS</th><th>Ad Cost / Unit</th><th>Cost / Delivered Order</th></tr>
                   </thead>
                   <tbody>
                     {adData.byProduct.map((p, i) => (
@@ -198,8 +205,10 @@ export default function AdsPage() {
                         <td className="td-product">{p.fullName}</td>
                         <td>{formatMoney(p.adSpend)}</td>
                         <td>{formatMoney(p.revenue)}</td>
+                        <td>{p.units}</td>
                         <td>{p.orders}</td>
-                        <td className={p.roas >= 2 ? 'positive' : p.roas >= 1 ? '' : 'negative'}>{p.roas > 0 ? `${p.roas.toFixed(1)}x` : '—'}</td>
+                        <td className={p.roas >= 2 ? 'positive' : p.roas >= 1 ? '' : 'negative'}>{p.roas > 0 ? `${p.roas.toFixed(1)}x` : '-'}</td>
+                        <td>{p.cpu > 0 ? formatMoney(p.cpu) : '-'}</td>
                         <td>{p.hasUnknownDeliveredOrders ? '—' : p.cpp > 0 ? formatMoney(p.cpp) : '—'}</td>
                       </tr>
                     ))}

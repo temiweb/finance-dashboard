@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, TrendingUp, Receipt,
-  PieChart, Megaphone, Wallet, Package, ClipboardCheck, Landmark, LogOut, Menu, X, Settings
+  PieChart, Megaphone, Wallet, Package, ClipboardCheck, Landmark, LogOut, Menu, X, Settings, Calculator
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../lib/useAuth';
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { id: 'cashflow', label: 'Cash Flow', icon: Wallet },
   { id: 'ghanaSettlements', label: 'Ghana Settlements', icon: Landmark },
   { id: 'inventory', label: 'Inventory Costs', icon: Package },
+  { id: 'unitEconomics', label: 'Unit Economics', icon: Calculator },
   { id: 'review', label: 'Review', icon: ClipboardCheck },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];

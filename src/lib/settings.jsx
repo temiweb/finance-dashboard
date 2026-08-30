@@ -14,6 +14,7 @@ export function SettingsProvider({ children }) {
   const [products, setProducts] = useState(DEFAULT_PRODUCTS);
   const [theme, setThemeState] = useState(() => localStorage.getItem('finance_theme') || 'dark');
   const [exchangeRate, setExchangeRate] = useState(250); // default GH₵1 = ₦250
+  const [unitCostOverrides, setUnitCostOverrides] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Apply theme to DOM
@@ -29,7 +30,7 @@ export function SettingsProvider({ children }) {
         const { data, error } = await supabase
           .from('finance_settings')
           .select('key, value')
-          .in('key', ['products', 'exchange_rate']);
+          .in('key', ['products', 'exchange_rate', 'unit_cost_overrides']);
 
         if (!error && data) {
           const productsRow = data.find(r => r.key === 'products');
@@ -47,6 +48,13 @@ export function SettingsProvider({ children }) {
               ? rateRow.value
               : Number(rateRow.value);
             if (parsed > 0) setExchangeRate(parsed);
+          }
+          const overridesRow = data.find(r => r.key === 'unit_cost_overrides');
+          if (overridesRow) {
+            const parsed = typeof overridesRow.value === 'string'
+              ? JSON.parse(overridesRow.value)
+              : overridesRow.value;
+            if (Array.isArray(parsed)) setUnitCostOverrides(parsed);
           }
         }
       } catch (e) {
@@ -97,6 +105,27 @@ export function SettingsProvider({ children }) {
     }
   }, []);
 
+  const saveUnitCostOverride = useCallback(async (override) => {
+    const cost = Number(override.cost);
+    if (!override.product || !override.effectiveDate || !Number.isFinite(cost) || cost <= 0) {
+      return { success: false, error: 'Enter a product, effective date, and cost greater than zero.' };
+    }
+    const nextOverrides = [
+      ...unitCostOverrides.filter(item => !(item.product === override.product && item.effective_date === override.effectiveDate)),
+      { product: override.product, cost, effective_date: override.effectiveDate },
+    ].sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+    try {
+      const { error } = await supabase
+        .from('finance_settings')
+        .upsert({ key: 'unit_cost_overrides', value: nextOverrides, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      setUnitCostOverrides(nextOverrides);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }, [unitCostOverrides]);
+
   // Convert GH₵ to ₦
   const convertToNaira = useCallback((amount, market, recordedRate = null) => {
     if (market === 'ghana') {
@@ -119,6 +148,8 @@ export function SettingsProvider({ children }) {
       saveProducts,
       exchangeRate,
       saveExchangeRate,
+      unitCostOverrides,
+      saveUnitCostOverride,
       convertToNaira,
       loading,
     }}>
