@@ -111,8 +111,12 @@ export function SettingsProvider({ children }) {
       return { success: false, error: 'Enter a product, effective date, and cost greater than zero.' };
     }
     const nextOverrides = [
-      ...unitCostOverrides.filter(item => !(item.product === override.product && item.effective_date === override.effectiveDate)),
-      { product: override.product, cost, effective_date: override.effectiveDate },
+      ...unitCostOverrides.filter(item => !(
+        item.product === override.product
+        && (item.market || 'all') === (override.market || 'all')
+        && item.effective_date === override.effectiveDate
+      )),
+      { product: override.product, market: override.market || 'all', cost, effective_date: override.effectiveDate },
     ].sort((a, b) => a.effective_date.localeCompare(b.effective_date));
     try {
       const { error } = await supabase
