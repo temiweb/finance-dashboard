@@ -104,6 +104,7 @@ export default function UnitEconomicsPage() {
         revenuePerUnit,
         adPerUnit,
         directPerUnit,
+        costedUnits: cogsPerUnit ? sales.units : 0,
         cogsForSoldUnits: cogsPerUnit * sales.units,
         contributionProfit: cogsPerUnit ? sales.revenue - (cogsPerUnit * sales.units) - productAdSpend - productDirectCosts : 0,
         profitPerUnit: cogsPerUnit && sales.units > 0 ? revenuePerUnit - cogsPerUnit - adPerUnit - directPerUnit : null,
@@ -121,8 +122,9 @@ export default function UnitEconomicsPage() {
         revenue: 0,
         adSpend: 0,
         directCosts: 0,
+        contributionProfit: 0,
+        costedUnits: 0,
         cogsForSoldUnits: 0,
-        hasMissingCogs: false,
         sources: new Set(),
         markets: new Set(),
       };
@@ -131,14 +133,15 @@ export default function UnitEconomicsPage() {
       existing.revenue += row.revenue;
       existing.adSpend += row.adSpend;
       existing.directCosts += row.directCosts;
+      existing.contributionProfit += row.contributionProfit;
+      existing.costedUnits += row.costedUnits;
       existing.cogsForSoldUnits += row.cogsForSoldUnits;
-      existing.hasMissingCogs ||= !row.cogsPerUnit;
       existing.sources.add(row.cogsSource);
       existing.markets.add(row.market);
       blendedRows.set(row.product, existing);
     });
     return Array.from(blendedRows.values()).map(row => {
-      const cogsPerUnit = row.hasMissingCogs ? 0 : row.cogsForSoldUnits / row.units;
+      const cogsPerUnit = row.costedUnits ? row.cogsForSoldUnits / row.costedUnits : 0;
       const revenuePerUnit = row.revenue / row.units;
       const adPerUnit = row.adSpend / row.units;
       const directPerUnit = row.directCosts / row.units;
@@ -148,16 +151,17 @@ export default function UnitEconomicsPage() {
         revenuePerUnit,
         adPerUnit,
         directPerUnit,
-        cogsSource: row.markets.size > 1 ? `Blended ${[...row.markets].join(' + ')} costs` : [...row.sources][0],
-        contributionProfit: cogsPerUnit ? row.revenue - row.cogsForSoldUnits - row.adSpend - row.directCosts : 0,
-        profitPerUnit: cogsPerUnit ? revenuePerUnit - cogsPerUnit - adPerUnit - directPerUnit : null,
+        cogsSource: row.costedUnits < row.units
+          ? `Partial coverage: ${row.costedUnits} of ${row.units} units costed`
+          : row.markets.size > 1 ? `Blended ${[...row.markets].join(' + ')} costs` : [...row.sources][0],
+        profitPerUnit: row.costedUnits ? row.contributionProfit / row.costedUnits : null,
       };
     }).sort((a, b) => b.revenue - a.revenue);
   }, [revenue, expenses, convertToNaira, unitCostOverrides, endDate, receivedBatches, market]);
 
   const totals = useMemo(() => economics.reduce((total, row) => ({
     units: total.units + row.units,
-    costedUnits: total.costedUnits + (row.cogsPerUnit ? row.units : 0),
+    costedUnits: total.costedUnits + row.costedUnits,
     cogs: total.cogs + row.cogsForSoldUnits,
     profit: total.profit + row.contributionProfit,
   }), { units: 0, costedUnits: 0, cogs: 0, profit: 0 }), [economics]);
